@@ -1,22 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { connectToDatabase } from "@/lib/mongodb"
+import clientPromise from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 
 export async function PATCH(request: NextRequest, { params }: { params: { feedbackId: string } }) {
   try {
-    const session = await getServerSession(authOptions)
+    const { feedbackId } = params
+    const body = await request.json()
+    const { status } = body
 
-    if (!session || session.user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!status || !["new", "reviewed", "archived"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 })
     }
 
-    const { status } = await request.json()
-    const { db } = await connectToDatabase()
+    const db = (await clientPromise).db("feedbackpro")
+    const collection = db.collection("feedback")
 
-    const result = await db.collection("feedback").updateOne(
-      { _id: new ObjectId(params.feedbackId) },
+    const result = await collection.updateOne(
+      { _id: new ObjectId(feedbackId) },
       {
         $set: {
           status,
@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { feedba
       return NextResponse.json({ error: "Feedback not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ message: "Feedback updated successfully" })
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error updating feedback:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -38,23 +38,18 @@ export async function PATCH(request: NextRequest, { params }: { params: { feedba
 
 export async function DELETE(request: NextRequest, { params }: { params: { feedbackId: string } }) {
   try {
-    const session = await getServerSession(authOptions)
+    const { feedbackId } = params
 
-    if (!session || session.user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const db = (await clientPromise).db("feedbackpro")
+    const collection = db.collection("feedback")
 
-    const { db } = await connectToDatabase()
-
-    const result = await db.collection("feedback").deleteOne({
-      _id: new ObjectId(params.feedbackId),
-    })
+    const result = await collection.deleteOne({ _id: new ObjectId(feedbackId) })
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "Feedback not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ message: "Feedback deleted successfully" })
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting feedback:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

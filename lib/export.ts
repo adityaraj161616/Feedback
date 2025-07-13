@@ -134,7 +134,7 @@ export async function exportToPDF(data: ExportData): Promise<Buffer> {
 }
 
 // Export to PDF with jsPDF and autoTable
-export async function exportToPdf(data: any[], filename: string, title: string) {
+export async function exportToPdfWithAutoTable(data: any[], filename: string, title: string) {
   if (!data || data.length === 0) {
     throw new Error("No data to export.")
   }

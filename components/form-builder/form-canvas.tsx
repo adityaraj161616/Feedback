@@ -1,267 +1,298 @@
 "use client"
 
-import { useRef } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Trash2, GripVertical, Settings, Star, ChevronUp, ChevronDown } from "lucide-react"
-import type { FormConfig, FormField } from "@/app/form-builder/page"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Badge } from "@/components/ui/badge"
+import {
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  Settings,
+  Eye,
+  Type,
+  Mail,
+  Phone,
+  Calendar,
+  Hash,
+  FileText,
+  CheckSquare,
+  Circle,
+  Star,
+  FileSlidersIcon as Slider,
+} from "lucide-react"
 
-interface FormCanvasProps {
-  formConfig: FormConfig
-  selectedField: string | null
-  onSelectField: (fieldId: string | null) => void
-  onUpdateField: (fieldId: string, updates: Partial<FormField>) => void
-  onDeleteField: (fieldId: string) => void
-  onReorderFields: (startIndex: number, endIndex: number) => void
-  onUpdateFormConfig: (updates: Partial<FormConfig>) => void
+interface FormField {
+  id: string
+  type: string
+  label: string
+  placeholder?: string
+  required: boolean
+  options?: string[]
+  validation?: any
 }
 
-export function FormCanvas({
-  formConfig,
-  selectedField,
-  onSelectField,
-  onUpdateField,
-  onDeleteField,
-  onReorderFields,
-  onUpdateFormConfig,
-}: FormCanvasProps) {
-  const canvasRef = useRef<HTMLDivElement>(null)
+interface FormCanvasProps {
+  fields: FormField[]
+  onFieldsChange: (fields: FormField[]) => void
+  onFieldSelect: (field: FormField | null) => void
+  selectedField: FormField | null
+}
+
+export function FormCanvas({ fields, onFieldsChange, onFieldSelect, selectedField }: FormCanvasProps) {
+  const [previewMode, setPreviewMode] = useState(false)
 
   const moveField = (index: number, direction: "up" | "down") => {
-    const newIndex = direction === "up" ? index - 1 : index + 1
-    if (newIndex >= 0 && newIndex < formConfig.fields.length) {
-      onReorderFields(index, newIndex)
+    const newFields = [...fields]
+    const targetIndex = direction === "up" ? index - 1 : index + 1
+
+    if (targetIndex >= 0 && targetIndex < newFields.length) {
+      ;[newFields[index], newFields[targetIndex]] = [newFields[targetIndex], newFields[index]]
+      onFieldsChange(newFields)
     }
   }
 
-  const renderField = (field: FormField, index: number) => {
-    const isSelected = selectedField === field.id
-
-    return (
-      <FieldItem
-        key={field.id}
-        field={field}
-        index={index}
-        isSelected={isSelected}
-        onSelect={() => onSelectField(field.id)}
-        onUpdate={(updates) => onUpdateField(field.id, updates)}
-        onDelete={() => onDeleteField(field.id)}
-        onMoveUp={() => moveField(index, "up")}
-        onMoveDown={() => moveField(index, "down")}
-        canMoveUp={index > 0}
-        canMoveDown={index < formConfig.fields.length - 1}
-      />
-    )
+  const removeField = (index: number) => {
+    const newFields = fields.filter((_, i) => i !== index)
+    onFieldsChange(newFields)
+    if (selectedField && selectedField.id === fields[index].id) {
+      onFieldSelect(null)
+    }
   }
 
-  return (
-    <div ref={canvasRef} className="max-w-2xl mx-auto">
-      {/* Form Header */}
-      <Card className="mb-8 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20">
-        <CardContent className="p-6">
-          <Input
-            value={formConfig.title}
-            onChange={(e) => onUpdateFormConfig({ title: e.target.value })}
-            className="text-2xl font-bold bg-transparent border-none text-white p-0 mb-4 focus:ring-0"
-            placeholder="Form Title"
-          />
-          <Textarea
-            value={formConfig.description}
-            onChange={(e) => onUpdateFormConfig({ description: e.target.value })}
-            className="bg-transparent border-none text-gray-300 p-0 resize-none focus:ring-0"
-            placeholder="Form Description"
-            rows={2}
-          />
-        </CardContent>
-      </Card>
+  const getFieldIcon = (type: string) => {
+    switch (type) {
+      case "text":
+        return <Type className="h-4 w-4" />
+      case "email":
+        return <Mail className="h-4 w-4" />
+      case "phone":
+        return <Phone className="h-4 w-4" />
+      case "number":
+        return <Hash className="h-4 w-4" />
+      case "date":
+        return <Calendar className="h-4 w-4" />
+      case "textarea":
+        return <FileText className="h-4 w-4" />
+      case "select":
+        return <CheckSquare className="h-4 w-4" />
+      case "radio":
+        return <Circle className="h-4 w-4" />
+      case "checkbox":
+        return <CheckSquare className="h-4 w-4" />
+      case "rating":
+        return <Star className="h-4 w-4" />
+      case "range":
+        return <Slider className="h-4 w-4" />
+      default:
+        return <Type className="h-4 w-4" />
+    }
+  }
 
-      {/* Form Fields */}
-      <div className="space-y-4">
-        {formConfig.fields.length === 0 ? (
-          <Card className="bg-white/5 border-white/10 border-dashed">
-            <CardContent className="p-12 text-center">
-              <div className="text-gray-400 text-lg mb-2">No fields added yet</div>
-              <div className="text-gray-500 text-sm">
-                Add fields from the palette on the left to start building your form
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          formConfig.fields.map((field, index) => renderField(field, index))
-        )}
-      </div>
-    </div>
-  )
-}
-
-function FieldItem({
-  field,
-  index,
-  isSelected,
-  onSelect,
-  onUpdate,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-  canMoveUp,
-  canMoveDown,
-}: {
-  field: FormField
-  index: number
-  isSelected: boolean
-  onSelect: () => void
-  onUpdate: (updates: Partial<FormField>) => void
-  onDelete: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
-  canMoveUp: boolean
-  canMoveDown: boolean
-}) {
-  const renderFieldPreview = () => {
+  const renderFieldPreview = (field: FormField) => {
     switch (field.type) {
       case "text":
+      case "email":
+      case "phone":
+      case "number":
+      case "date":
         return (
-          <Input
-            placeholder={field.placeholder || "Enter your response..."}
-            className="bg-white/10 border-white/20 text-white"
-            disabled
-          />
+          <Input type={field.type} placeholder={field.placeholder} disabled className="bg-white/5 border-white/20" />
         )
       case "textarea":
+        return <Textarea placeholder={field.placeholder} disabled className="bg-white/5 border-white/20" />
+      case "select":
         return (
-          <Textarea
-            placeholder={field.placeholder || "Enter your detailed response..."}
-            className="bg-white/10 border-white/20 text-white"
-            rows={3}
-            disabled
-          />
+          <Select disabled>
+            <SelectTrigger className="bg-white/5 border-white/20">
+              <SelectValue placeholder="Select an option" />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option, idx) => (
+                <SelectItem key={idx} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )
+      case "radio":
+        return (
+          <RadioGroup disabled>
+            {field.options?.map((option, idx) => (
+              <div key={idx} className="flex items-center space-x-2">
+                <RadioGroupItem value={option} id={`${field.id}-${idx}`} />
+                <Label htmlFor={`${field.id}-${idx}`} className="text-gray-300">
+                  {option}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        )
+      case "checkbox":
+        return (
+          <div className="space-y-2">
+            {field.options?.map((option, idx) => (
+              <div key={idx} className="flex items-center space-x-2">
+                <Checkbox id={`${field.id}-${idx}`} disabled />
+                <Label htmlFor={`${field.id}-${idx}`} className="text-gray-300">
+                  {option}
+                </Label>
+              </div>
+            ))}
+          </div>
         )
       case "rating":
         return (
           <div className="flex space-x-1">
             {[1, 2, 3, 4, 5].map((star) => (
-              <Star key={star} className="h-6 w-6 text-yellow-400 cursor-pointer hover:fill-current" />
+              <Star key={star} className="h-6 w-6 text-gray-400" />
             ))}
           </div>
         )
-      case "emoji":
+      case "range":
         return (
-          <div className="flex space-x-2">
-            {["😢", "😐", "😊", "😍", "🤩"].map((emoji, index) => (
-              <button key={index} className="text-2xl p-2 rounded-lg hover:bg-white/10 transition-colors" disabled>
-                {emoji}
-              </button>
-            ))}
-          </div>
-        )
-      case "select":
-        return (
-          <select className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white" disabled>
-            <option>Select an option...</option>
-            {field.options?.map((option, index) => (
-              <option key={index} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        )
-      case "file":
-        return (
-          <div className="border-2 border-dashed border-white/20 rounded-lg p-8 text-center">
-            <div className="text-gray-400">Click to upload or drag and drop</div>
-            <div className="text-sm text-gray-500 mt-1">PNG, JPG, PDF up to 10MB</div>
+          <div className="space-y-2">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              disabled
+              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            />
+            <div className="flex justify-between text-sm text-gray-400">
+              <span>0</span>
+              <span>100</span>
+            </div>
           </div>
         )
       default:
-        return null
+        return <Input placeholder={field.placeholder} disabled className="bg-white/5 border-white/20" />
     }
   }
 
   return (
-    <Card
-      data-field-id={field.id}
-      className={`group cursor-pointer transition-all duration-200 ${
-        isSelected
-          ? "bg-gradient-to-br from-purple-500/20 to-blue-500/20 border-purple-400"
-          : "bg-white/5 border-white/10 hover:border-white/20"
-      }`}
-      onClick={onSelect}
-    >
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="flex flex-col space-y-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-4 w-4 p-0 text-gray-400 hover:text-white disabled:opacity-30"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onMoveUp()
-                  }}
-                  disabled={!canMoveUp}
-                >
-                  <ChevronUp className="h-3 w-3" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-4 w-4 p-0 text-gray-400 hover:text-white disabled:opacity-30"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onMoveDown()
-                  }}
-                  disabled={!canMoveDown}
-                >
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
+    <Card className="bg-white/5 border-white/10 h-full">
+      <CardHeader>
+        <CardTitle className="text-white flex items-center justify-between">
+          <span>Form Canvas</span>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={previewMode ? "default" : "outline"}
+              onClick={() => setPreviewMode(!previewMode)}
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              {previewMode ? "Edit" : "Preview"}
+            </Button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {fields.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No fields added yet</h3>
+            <p className="text-sm">Drag fields from the palette to start building your form</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {fields.map((field, index) => (
+              <div
+                key={field.id}
+                className={`
+                  group relative p-4 rounded-lg border transition-all duration-200
+                  ${
+                    selectedField?.id === field.id
+                      ? "border-blue-500 bg-blue-500/10"
+                      : "border-white/20 bg-white/5 hover:border-white/30 hover:bg-white/10"
+                  }
+                `}
+                onClick={() => onFieldSelect(field)}
+              >
+                {/* Field Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 bg-blue-500/20 rounded">{getFieldIcon(field.type)}</div>
+                    <span className="text-white font-medium">{field.label}</span>
+                    {field.required && (
+                      <Badge variant="secondary" className="text-xs bg-red-500/20 text-red-400">
+                        Required
+                      </Badge>
+                    )}
+                  </div>
+
+                  {!previewMode && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          moveField(index, "up")
+                        }}
+                        disabled={index === 0}
+                        className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          moveField(index, "down")
+                        }}
+                        disabled={index === fields.length - 1}
+                        className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onFieldSelect(field)
+                        }}
+                        className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeField(index)
+                        }}
+                        className="h-8 w-8 p-0 text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Field Preview */}
+                <div className="space-y-2">
+                  <Label className="text-gray-300">
+                    {field.label}
+                    {field.required && <span className="text-red-400 ml-1">*</span>}
+                  </Label>
+                  {renderFieldPreview(field)}
+                </div>
               </div>
-              <GripVertical className="h-4 w-4 text-gray-400" />
-              <Input
-                value={field.label}
-                onChange={(e) => onUpdate({ label: e.target.value })}
-                className="bg-transparent border-none text-white font-medium p-0 focus:ring-0"
-                placeholder="Field Label"
-                onClick={(e) => e.stopPropagation()}
-              />
-              {field.required && <span className="text-red-400 text-sm">*</span>}
-            </div>
+            ))}
           </div>
-
-          <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-gray-400 hover:text-white"
-              onClick={(e) => {
-                e.stopPropagation()
-                onSelect()
-              }}
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-gray-400 hover:text-red-400"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete()
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-gray-300">{field.label}</Label>
-          {renderFieldPreview()}
-        </div>
+        )}
       </CardContent>
     </Card>
   )

@@ -11,7 +11,8 @@ export function SentimentChart({ data }: SentimentChartProps) {
   // Calculate sentiment distribution
   const sentimentCounts = data.reduce(
     (acc, item) => {
-      acc[item.sentiment] = (acc[item.sentiment] || 0) + 1
+      const sentiment = item.sentiment?.label?.toLowerCase() || "neutral"
+      acc[sentiment] = (acc[sentiment] || 0) + 1
       return acc
     },
     { positive: 0, neutral: 0, negative: 0 },
