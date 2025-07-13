@@ -1,17 +1,13 @@
 "use client"
 
 import { useRef } from "react"
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Trash2, GripVertical, Settings, Star } from "lucide-react"
+import { Trash2, GripVertical, Settings, Star, ChevronUp, ChevronDown } from "lucide-react"
 import type { FormConfig, FormField } from "@/app/form-builder/page"
-import { useSortable } from "@dnd-kit/sortable"
 
 interface FormCanvasProps {
   formConfig: FormConfig
@@ -20,7 +16,7 @@ interface FormCanvasProps {
   onUpdateField: (fieldId: string, updates: Partial<FormField>) => void
   onDeleteField: (fieldId: string) => void
   onReorderFields: (startIndex: number, endIndex: number) => void
-  onUpdateFormConfig: (updates: Partial<FormConfig>) => void // New prop for form-level updates
+  onUpdateFormConfig: (updates: Partial<FormConfig>) => void
 }
 
 export function FormCanvas({
@@ -30,33 +26,33 @@ export function FormCanvas({
   onUpdateField,
   onDeleteField,
   onReorderFields,
-  onUpdateFormConfig, // Destructure the new prop
+  onUpdateFormConfig,
 }: FormCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor))
 
-  const handleDragEnd = (event: any) => {
-    const { active, over } = event
-
-    if (active.id !== over.id) {
-      const oldIndex = formConfig.fields.findIndex((field) => field.id === active.id)
-      const newIndex = formConfig.fields.findIndex((field) => field.id === over.id)
-
-      onReorderFields(oldIndex, newIndex)
+  const moveField = (index: number, direction: "up" | "down") => {
+    const newIndex = direction === "up" ? index - 1 : index + 1
+    if (newIndex >= 0 && newIndex < formConfig.fields.length) {
+      onReorderFields(index, newIndex)
     }
   }
 
-  const renderField = (field: FormField) => {
+  const renderField = (field: FormField, index: number) => {
     const isSelected = selectedField === field.id
 
     return (
-      <SortableFieldItem
+      <FieldItem
         key={field.id}
         field={field}
+        index={index}
         isSelected={isSelected}
         onSelect={() => onSelectField(field.id)}
         onUpdate={(updates) => onUpdateField(field.id, updates)}
         onDelete={() => onDeleteField(field.id)}
+        onMoveUp={() => moveField(index, "up")}
+        onMoveDown={() => moveField(index, "down")}
+        canMoveUp={index > 0}
+        canMoveDown={index < formConfig.fields.length - 1}
       />
     )
   }
@@ -68,13 +64,13 @@ export function FormCanvas({
         <CardContent className="p-6">
           <Input
             value={formConfig.title}
-            onChange={(e) => onUpdateFormConfig({ title: e.target.value })} // Corrected to use onUpdateFormConfig
+            onChange={(e) => onUpdateFormConfig({ title: e.target.value })}
             className="text-2xl font-bold bg-transparent border-none text-white p-0 mb-4 focus:ring-0"
             placeholder="Form Title"
           />
           <Textarea
             value={formConfig.description}
-            onChange={(e) => onUpdateFormConfig({ description: e.target.value })} // Corrected to use onUpdateFormConfig
+            onChange={(e) => onUpdateFormConfig({ description: e.target.value })}
             className="bg-transparent border-none text-gray-300 p-0 resize-none focus:ring-0"
             placeholder="Form Description"
             rows={2}
@@ -83,56 +79,47 @@ export function FormCanvas({
       </Card>
 
       {/* Form Fields */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-        modifiers={[restrictToVerticalAxis]}
-      >
-        <SortableContext items={formConfig.fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-4">
-            {formConfig.fields.length === 0 ? (
-              <Card className="bg-white/5 border-white/10 border-dashed">
-                <CardContent className="p-12 text-center">
-                  <div className="text-gray-400 text-lg mb-2">No fields added yet</div>
-                  <div className="text-gray-500 text-sm">
-                    Add fields from the palette on the left to start building your form
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              formConfig.fields.map(renderField)
-            )}
-          </div>
-        </SortableContext>
-      </DndContext>
+      <div className="space-y-4">
+        {formConfig.fields.length === 0 ? (
+          <Card className="bg-white/5 border-white/10 border-dashed">
+            <CardContent className="p-12 text-center">
+              <div className="text-gray-400 text-lg mb-2">No fields added yet</div>
+              <div className="text-gray-500 text-sm">
+                Add fields from the palette on the left to start building your form
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          formConfig.fields.map((field, index) => renderField(field, index))
+        )}
+      </div>
     </div>
   )
 }
 
-function SortableFieldItem({
+function FieldItem({
   field,
+  index,
   isSelected,
   onSelect,
   onUpdate,
   onDelete,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: {
   field: FormField
+  index: number
   isSelected: boolean
   onSelect: () => void
   onUpdate: (updates: Partial<FormField>) => void
   onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  canMoveUp: boolean
+  canMoveDown: boolean
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: field.id,
-  })
-
-  const style = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
   const renderFieldPreview = () => {
     switch (field.type) {
       case "text":
@@ -195,8 +182,6 @@ function SortableFieldItem({
 
   return (
     <Card
-      ref={setNodeRef}
-      style={style}
       data-field-id={field.id}
       className={`group cursor-pointer transition-all duration-200 ${
         isSelected
@@ -209,13 +194,33 @@ function SortableFieldItem({
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-2">
-              <button
-                {...attributes}
-                {...listeners}
-                className="text-gray-400 hover:text-white cursor-grab active:cursor-grabbing"
-              >
-                <GripVertical className="h-4 w-4" />
-              </button>
+              <div className="flex flex-col space-y-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-4 w-4 p-0 text-gray-400 hover:text-white disabled:opacity-30"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onMoveUp()
+                  }}
+                  disabled={!canMoveUp}
+                >
+                  <ChevronUp className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-4 w-4 p-0 text-gray-400 hover:text-white disabled:opacity-30"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onMoveDown()
+                  }}
+                  disabled={!canMoveDown}
+                >
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </div>
+              <GripVertical className="h-4 w-4 text-gray-400" />
               <Input
                 value={field.label}
                 onChange={(e) => onUpdate({ label: e.target.value })}
