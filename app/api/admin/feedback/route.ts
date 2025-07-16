@@ -1,39 +1,52 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "../../auth/[...nextauth]/route"
 import clientPromise from "@/lib/mongodb"
+import { ObjectId } from "mongodb"
 
-export async function GET(request: NextRequest) {
+export async function PATCH(request: NextRequest, { params }: { params: { feedbackId: string } }) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session || session.user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const { feedbackId } = params
+    const body = await request.json()
 
     const db = (await clientPromise).db("feedbackpro")
-    const feedback = db.collection("feedback")
+    const feedbackCollection = db.collection("feedback")
 
-    // Get all feedback with pagination
-    const page = Number.parseInt(request.nextUrl.searchParams.get("page") || "1")
-    const limit = Number.parseInt(request.nextUrl.searchParams.get("limit") || "50")
-    const skip = (page - 1) * limit
-
-    const allFeedback = await feedback.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray()
-
-    const total = await feedback.countDocuments()
-
-    return NextResponse.json({
-      feedback: allFeedback,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
+    const result = await feedbackCollection.updateOne(
+      { _id: new ObjectId(feedbackId) },
+      {
+        $set: {
+          status: body.status,
+          updatedAt: new Date(),
+        },
       },
-    })
+    )
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ error: "Feedback not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error fetching admin feedback:", error)
-    return NextResponse.json({ error: "Failed to fetch feedback" }, { status: 500 })
+    console.error("Error updating feedback:", error)
+    return NextResponse.json({ error: "Failed to update feedback" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { feedbackId: string } }) {
+  try {
+    const { feedbackId } = params
+
+    const db = (await clientPromise).db("feedbackpro")
+    const feedbackCollection = db.collection("feedback")
+
+    const result = await feedbackCollection.deleteOne({ _id: new ObjectId(feedbackId) })
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: "Feedback not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting feedback:", error)
+    return NextResponse.json({ error: "Failed to delete feedback" }, { status: 500 })
   }
 }

@@ -4,108 +4,94 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Bell, Clock, MessageSquare, TrendingUp, Users, RefreshCw } from "lucide-react"
+import { Bell, MessageSquare, TrendingUp, Users, RefreshCw } from "lucide-react"
 
 interface RealtimeUpdate {
-  id: number | string
-  type: "feedback" | "sentiment" | "user" | "alert"
+  id: string
+  type: "feedback" | "form" | "user"
   message: string
   timestamp: Date
-  severity: "info" | "success" | "warning" | "error"
+  severity: "info" | "warning" | "success"
 }
 
 export function RealtimeUpdates() {
-  const [updates, setUpdates] = useState<RealtimeUpdate[]>([
-    {
-      id: 1,
-      type: "feedback",
-      message: "New feedback received on Product Survey",
-      timestamp: new Date(Date.now() - 5 * 60 * 1000),
-      severity: "info",
-    },
-    {
-      id: 2,
-      type: "sentiment",
-      message: "Sentiment trend improving for Customer Service Form",
-      timestamp: new Date(Date.now() - 15 * 60 * 1000),
-      severity: "success",
-    },
-    {
-      id: 3,
-      type: "alert",
-      message: "High negative sentiment detected on Bug Report Form",
-      timestamp: new Date(Date.now() - 30 * 60 * 1000),
-      severity: "warning",
-    },
-    {
-      id: 4,
-      type: "user",
-      message: "New user registered: john.doe@example.com",
-      timestamp: new Date(Date.now() - 45 * 60 * 1000),
-      severity: "info",
-    },
-  ])
-
-  const [isConnected, setIsConnected] = useState(true)
+  const [updates, setUpdates] = useState<RealtimeUpdate[]>([])
+  const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
     // Simulate real-time updates
     const interval = setInterval(() => {
-      const newUpdate = {
-        id: Date.now(),
-        type: ["feedback", "sentiment", "user", "alert"][Math.floor(Math.random() * 4)],
-        message: [
-          "New feedback received",
-          "Sentiment analysis completed",
-          "User activity detected",
-          "System alert triggered",
-        ][Math.floor(Math.random() * 4)],
+      const updateTypes = [
+        {
+          type: "feedback" as const,
+          messages: [
+            "New feedback received on Product Survey",
+            "Negative feedback alert on Customer Service Form",
+            "High satisfaction score on Website Feedback",
+          ],
+          severity: "info" as const,
+        },
+        {
+          type: "form" as const,
+          messages: [
+            "Form 'User Experience Survey' published",
+            "Form analytics updated",
+            "New form created: 'Event Feedback'",
+          ],
+          severity: "success" as const,
+        },
+        {
+          type: "user" as const,
+          messages: ["New user registered", "User upgraded to premium", "User exported feedback data"],
+          severity: "info" as const,
+        },
+      ]
+
+      const randomType = updateTypes[Math.floor(Math.random() * updateTypes.length)]
+      const randomMessage = randomType.messages[Math.floor(Math.random() * randomType.messages.length)]
+
+      const newUpdate: RealtimeUpdate = {
+        id: Date.now().toString(),
+        type: randomType.type,
+        message: randomMessage,
         timestamp: new Date(),
-        severity: ["info", "success", "warning"][Math.floor(Math.random() * 3)],
+        severity: randomType.severity,
       }
 
-      setUpdates((prev) => [newUpdate, ...prev.slice(0, 9)])
-    }, 30000) // Add new update every 30 seconds
+      setUpdates((prev) => [newUpdate, ...prev.slice(0, 9)]) // Keep only 10 latest
+    }, 5000) // Update every 5 seconds
 
-    return () => clearInterval(interval)
+    setIsConnected(true)
+
+    return () => {
+      clearInterval(interval)
+      setIsConnected(false)
+    }
   }, [])
 
-  const getUpdateIcon = (type: string) => {
+  const getIcon = (type: string) => {
     switch (type) {
       case "feedback":
         return <MessageSquare className="h-4 w-4" />
-      case "sentiment":
+      case "form":
         return <TrendingUp className="h-4 w-4" />
       case "user":
         return <Users className="h-4 w-4" />
-      case "alert":
-        return <Bell className="h-4 w-4" />
       default:
-        return <Clock className="h-4 w-4" />
+        return <Bell className="h-4 w-4" />
     }
   }
 
-  const getSeverityColor = (severity: string) => {
+  const getBadgeVariant = (severity: string) => {
     switch (severity) {
       case "success":
-        return "text-green-400 bg-green-500/20 border-green-500/30"
+        return "default"
       case "warning":
-        return "text-yellow-400 bg-yellow-500/20 border-yellow-500/30"
-      case "error":
-        return "text-red-400 bg-red-500/20 border-red-500/30"
+        return "secondary"
+      case "info":
       default:
-        return "text-blue-400 bg-blue-500/20 border-blue-500/30"
+        return "outline"
     }
-  }
-
-  const formatTimeAgo = (timestamp: Date) => {
-    const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60))
-
-    if (diffInMinutes < 1) return "Just now"
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
-    return `${Math.floor(diffInMinutes / 1440)}d ago`
   }
 
   return (
@@ -113,54 +99,52 @@ export function RealtimeUpdates() {
       <CardHeader>
         <CardTitle className="text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-blue-400" />
+            <Bell className="h-5 w-5" />
             Real-time Updates
           </div>
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-400" : "bg-red-400"}`} />
             <span className="text-xs text-gray-400">{isConnected ? "Connected" : "Disconnected"}</span>
-            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-gray-400 hover:text-white">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
           </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {updates.map((update) => (
-            <div
-              key={update.id}
-              className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
-            >
-              <div className={`p-2 rounded-lg ${getSeverityColor(update.severity)}`}>{getUpdateIcon(update.type)}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-medium">{update.message}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className={`text-xs ${getSeverityColor(update.severity)}`}>
-                    {update.type}
-                  </Badge>
-                  <span className="text-xs text-gray-400">{formatTimeAgo(update.timestamp)}</span>
+        <div className="space-y-4">
+          {updates.length > 0 ? (
+            updates.map((update) => (
+              <div key={update.id} className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                <div className="p-2 bg-blue-500/20 rounded-lg flex-shrink-0">{getIcon(update.type)}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant={getBadgeVariant(update.severity)} className="text-xs">
+                      {update.type}
+                    </Badge>
+                    <span className="text-xs text-gray-400">{update.timestamp.toLocaleTimeString()}</span>
+                  </div>
+                  <p className="text-sm text-gray-200 leading-relaxed">{update.message}</p>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <RefreshCw className="h-8 w-8 text-gray-400 mx-auto mb-2 animate-spin" />
+              <p className="text-gray-400 text-sm">Waiting for updates...</p>
             </div>
-          ))}
+          )}
         </div>
 
-        {/* Activity Summary */}
-        <div className="mt-4 pt-4 border-t border-white/10">
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div>
-              <div className="text-lg font-bold text-white">{updates.filter((u) => u.type === "feedback").length}</div>
-              <div className="text-xs text-gray-400">Feedback Updates</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-white">
-                {updates.filter((u) => u.severity === "warning").length}
-              </div>
-              <div className="text-xs text-gray-400">Alerts</div>
-            </div>
+        {updates.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20"
+              onClick={() => setUpdates([])}
+            >
+              Clear All Updates
+            </Button>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   )

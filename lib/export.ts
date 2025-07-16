@@ -11,6 +11,15 @@ export interface ExportData {
   metadata?: Record<string, any>
 }
 
+export interface ExportOptions {
+  format: "csv" | "json"
+  dateRange?: {
+    start: Date
+    end: Date
+  }
+  includeMetadata?: boolean
+}
+
 // Extend jspdf with autoTable
 // This is a common pattern when using jspdf-autotable with TypeScript
 declare module "jspdf" {
@@ -20,32 +29,26 @@ declare module "jspdf" {
 }
 
 // Export to CSV
-export function exportToCSV(data: ExportData): string {
-  if (!data.data || data.data.length === 0) {
-    return "No data to export"
-  }
+export function exportToCSV(data: any[]): string {
+  if (data.length === 0) return ""
 
-  // Get all unique keys from all objects
-  const allKeys = new Set<string>()
-  data.data.forEach((item) => {
-    Object.keys(item).forEach((key) => allKeys.add(key))
-  })
+  const headers = Object.keys(data[0])
+  const csvContent = [
+    headers.join(","),
+    ...data.map((row) =>
+      headers
+        .map((header) => {
+          const value = row[header]
+          if (typeof value === "string" && value.includes(",")) {
+            return `"${value.replace(/"/g, '""')}"`
+          }
+          return value
+        })
+        .join(","),
+    ),
+  ].join("\n")
 
-  const headers = Array.from(allKeys)
-  const csvHeaders = headers.map((header) => `"${header}"`).join(",")
-
-  const csvRows = data.data.map((item) => {
-    return headers
-      .map((header) => {
-        const value = item[header]
-        if (value === null || value === undefined) return '""'
-        if (typeof value === "object") return `"${JSON.stringify(value).replace(/"/g, '""')}"`
-        return `"${String(value).replace(/"/g, '""')}"`
-      })
-      .join(",")
-  })
-
-  return [csvHeaders, ...csvRows].join("\n")
+  return csvContent
 }
 
 // Export to CSV with Blob
@@ -73,6 +76,49 @@ export async function exportToCsv(data: any[], filename: string) {
   const csvString = csvRows.join("\n")
   const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" })
   return blob
+}
+
+// Export to JSON
+export function exportToJSON(data: any[]): string {
+  return JSON.stringify(data, null, 2)
+}
+
+// Download file
+export function downloadFile(content: string, filename: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  URL.revokeObjectURL(url)
+}
+
+// Format data for export
+export function formatDataForExport(feedback: any[], options: ExportOptions) {
+  let processedData = feedback.map((item) => ({
+    id: item._id,
+    formTitle: item.formTitle,
+    content: item.content,
+    rating: item.rating || "N/A",
+    sentiment: item.sentiment,
+    status: item.status,
+    createdAt: new Date(item.createdAt).toISOString(),
+    userEmail: item.userEmail || "Anonymous",
+  }))
+
+  if (options.dateRange) {
+    processedData = processedData.filter((item) => {
+      const itemDate = new Date(item.createdAt)
+      return itemDate >= options.dateRange!.start && itemDate <= options.dateRange!.end
+    })
+  }
+
+  return processedData
 }
 
 // Export to PDF

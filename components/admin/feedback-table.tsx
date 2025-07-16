@@ -3,11 +3,12 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Download, Eye, Trash2, Archive, CheckCircle, Clock } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Search, Filter, Download, Trash2, Eye, MoreHorizontal } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface FeedbackTableProps {
   data: any[]
@@ -21,17 +22,28 @@ export function FeedbackTable({ data, onUpdate }: FeedbackTableProps) {
 
   const filteredData = data.filter((item) => {
     const matchesSearch =
-      item.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.formId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      JSON.stringify(item.responses || {})
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
+      item.responses?.feedback?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.id.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === "all" || item.status === statusFilter
     const matchesSentiment = sentimentFilter === "all" || item.sentiment?.label?.toLowerCase() === sentimentFilter
 
     return matchesSearch && matchesStatus && matchesSentiment
   })
+
+  const handleDelete = async (feedbackId: string) => {
+    try {
+      const response = await fetch(`/api/admin/feedback/${feedbackId}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        onUpdate()
+      }
+    } catch (error) {
+      console.error("Error deleting feedback:", error)
+    }
+  }
 
   const handleStatusUpdate = async (feedbackId: string, newStatus: string) => {
     try {
@@ -51,45 +63,27 @@ export function FeedbackTable({ data, onUpdate }: FeedbackTableProps) {
     }
   }
 
-  const handleDelete = async (feedbackId: string) => {
-    if (!confirm("Are you sure you want to delete this feedback?")) return
-
-    try {
-      const response = await fetch(`/api/admin/feedback/${feedbackId}`, {
-        method: "DELETE",
-      })
-
-      if (response.ok) {
-        onUpdate()
-      }
-    } catch (error) {
-      console.error("Error deleting feedback:", error)
-    }
-  }
-
   const getSentimentBadge = (sentiment: any) => {
     if (!sentiment) return <Badge variant="secondary">Unknown</Badge>
 
-    const label = sentiment.label?.toLowerCase()
-    switch (label) {
-      case "positive":
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Positive</Badge>
-      case "negative":
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Negative</Badge>
-      default:
-        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Neutral</Badge>
-    }
+    const { label, score } = sentiment
+    const variant = label === "Positive" ? "default" : label === "Negative" ? "destructive" : "secondary"
+
+    return (
+      <Badge variant={variant} className="flex items-center gap-1">
+        <span>{sentiment.emoji || "😐"}</span>
+        {label} ({(score * 100).toFixed(0)}%)
+      </Badge>
+    )
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "reviewed":
-        return <CheckCircle className="h-4 w-4 text-green-400" />
-      case "archived":
-        return <Archive className="h-4 w-4 text-gray-400" />
-      default:
-        return <Clock className="h-4 w-4 text-yellow-400" />
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      new: "default",
+      reviewed: "secondary",
+      archived: "outline",
     }
+    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>
   }
 
   return (
@@ -98,7 +92,7 @@ export function FeedbackTable({ data, onUpdate }: FeedbackTableProps) {
         <CardTitle className="text-white flex items-center justify-between">
           <span>Feedback Management</span>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+            <Button variant="outline" size="sm" className="bg-white/10 border-white/20 text-white">
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
@@ -107,7 +101,7 @@ export function FeedbackTable({ data, onUpdate }: FeedbackTableProps) {
       </CardHeader>
       <CardContent>
         {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -117,9 +111,10 @@ export function FeedbackTable({ data, onUpdate }: FeedbackTableProps) {
               className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
             />
           </div>
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48 bg-white/10 border-white/20 text-white">
-              <SelectValue placeholder="Filter by status" />
+            <SelectTrigger className="w-40 bg-white/10 border-white/20 text-white">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700">
               <SelectItem value="all" className="text-white">
@@ -136,9 +131,10 @@ export function FeedbackTable({ data, onUpdate }: FeedbackTableProps) {
               </SelectItem>
             </SelectContent>
           </Select>
+
           <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
-            <SelectTrigger className="w-48 bg-white/10 border-white/20 text-white">
-              <SelectValue placeholder="Filter by sentiment" />
+            <SelectTrigger className="w-40 bg-white/10 border-white/20 text-white">
+              <SelectValue placeholder="Sentiment" />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700">
               <SelectItem value="all" className="text-white">
@@ -158,12 +154,12 @@ export function FeedbackTable({ data, onUpdate }: FeedbackTableProps) {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border border-white/10 overflow-hidden">
+        <div className="rounded-md border border-white/10 overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-white/5">
                 <TableHead className="text-gray-300">ID</TableHead>
-                <TableHead className="text-gray-300">Form</TableHead>
+                <TableHead className="text-gray-300">Feedback</TableHead>
                 <TableHead className="text-gray-300">Sentiment</TableHead>
                 <TableHead className="text-gray-300">Status</TableHead>
                 <TableHead className="text-gray-300">Date</TableHead>
@@ -172,53 +168,50 @@ export function FeedbackTable({ data, onUpdate }: FeedbackTableProps) {
             </TableHeader>
             <TableBody>
               {filteredData.length > 0 ? (
-                filteredData.map((feedback) => (
-                  <TableRow key={feedback.id} className="border-white/10 hover:bg-white/5">
-                    <TableCell className="text-white font-mono text-sm">{feedback.id?.substring(0, 8)}...</TableCell>
-                    <TableCell className="text-gray-300">{feedback.formId?.substring(0, 8)}...</TableCell>
-                    <TableCell>{getSentimentBadge(feedback.sentiment)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(feedback.status || "new")}
-                        <span className="text-gray-300 capitalize">{feedback.status || "new"}</span>
+                filteredData.map((item) => (
+                  <TableRow key={item.id} className="border-white/10 hover:bg-white/5">
+                    <TableCell className="text-gray-300 font-mono text-xs">{item.id.slice(0, 8)}...</TableCell>
+                    <TableCell className="text-white max-w-xs">
+                      <div className="truncate">
+                        {item.responses?.feedback || item.responses?.comment || "No feedback text"}
                       </div>
                     </TableCell>
+                    <TableCell>{getSentimentBadge(item.sentiment)}</TableCell>
+                    <TableCell>{getStatusBadge(item.status || "new")}</TableCell>
                     <TableCell className="text-gray-300">
-                      {feedback.createdAt ? new Date(feedback.createdAt).toLocaleDateString() : "N/A"}
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "N/A"}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-blue-400 hover:bg-blue-500/20">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Select
-                          value={feedback.status || "new"}
-                          onValueChange={(value) => handleStatusUpdate(feedback.id, value)}
-                        >
-                          <SelectTrigger className="h-8 w-24 bg-white/10 border-white/20 text-white text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-gray-800 border-gray-700">
-                            <SelectItem value="new" className="text-white">
-                              New
-                            </SelectItem>
-                            <SelectItem value="reviewed" className="text-white">
-                              Reviewed
-                            </SelectItem>
-                            <SelectItem value="archived" className="text-white">
-                              Archived
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(feedback.id)}
-                          className="h-8 w-8 p-0 text-red-400 hover:bg-red-500/20"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-white">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-gray-800 border-gray-700">
+                          <DropdownMenuItem
+                            className="text-white hover:bg-gray-700"
+                            onClick={() => handleStatusUpdate(item.id, "reviewed")}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Mark as Reviewed
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-white hover:bg-gray-700"
+                            onClick={() => handleStatusUpdate(item.id, "archived")}
+                          >
+                            <Filter className="h-4 w-4 mr-2" />
+                            Archive
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-400 hover:bg-red-900/20"
+                            onClick={() => handleDelete(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -234,24 +227,8 @@ export function FeedbackTable({ data, onUpdate }: FeedbackTableProps) {
         </div>
 
         {/* Summary */}
-        <div className="mt-4 flex justify-between items-center text-sm text-gray-400">
-          <span>
-            Showing {filteredData.length} of {data.length} feedback entries
-          </span>
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              Positive: {data.filter((f) => f.sentiment?.label?.toLowerCase() === "positive").length}
-            </span>
-            <span className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-              Neutral: {data.filter((f) => f.sentiment?.label?.toLowerCase() === "neutral").length}
-            </span>
-            <span className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              Negative: {data.filter((f) => f.sentiment?.label?.toLowerCase() === "negative").length}
-            </span>
-          </div>
+        <div className="mt-4 text-sm text-gray-400">
+          Showing {filteredData.length} of {data.length} feedback entries
         </div>
       </CardContent>
     </Card>

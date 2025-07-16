@@ -70,3 +70,29 @@ export function sanitizeObject(obj: any): any {
   }
   return sanitizedObj
 }
+
+// URL validation function
+export function isValidURL(url: string): boolean {
+  try {
+    const urlObj = new URL(url)
+    // Only allow http and https protocols
+    return urlObj.protocol === "http:" || urlObj.protocol === "https:"
+  } catch (error) {
+    return false
+  }
+}
+
+// Additional security utilities
+export function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+export function generateSecureToken(length = 32): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  let result = ""
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
+}

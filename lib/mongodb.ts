@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb"
+import { MongoClient, type Db } from "mongodb"
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
@@ -28,13 +28,13 @@ if (process.env.NODE_ENV === "development") {
   clientPromise = client.connect()
 }
 
-// Export a module-scoped MongoClient promise. By doing this in a
-// separate module, the client can be shared across functions.
-export default clientPromise
-
-// Also export a function for explicit database connection
-export async function connectToDatabase() {
+// Named export for connectToDatabase function
+export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
   const client = await clientPromise
   const db = client.db("feedbackpro")
   return { client, db }
 }
+
+// Export a module-scoped MongoClient promise. By doing this in a
+// separate module, the client can be shared across functions.
+export default clientPromise

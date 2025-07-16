@@ -15,8 +15,7 @@ export const authOptions = {
     session: async ({ session, token }) => {
       if (session?.user) {
         session.user.id = token.sub
-        // Add role to session if needed
-        session.user.role = "user" // Default role, can be fetched from database
+        session.user.role = "user"
       }
       return session
     },
@@ -29,6 +28,10 @@ export const authOptions = {
   },
   session: {
     strategy: "jwt",
+  },
+  pages: {
+    signIn: "/auth/signin",
+    error: "/auth/error",
   },
 }
 

@@ -66,6 +66,9 @@ export async function analyzeSentimentWithAI(text: string, rating?: number): Pro
   }
 }
 
+// Named export for analyzeSentiment (alias for analyzeSentimentWithAI)
+export const analyzeSentiment = analyzeSentimentWithAI
+
 function getSentimentFromRating(rating: number): SentimentResult {
   if (rating <= 2) {
     return {
