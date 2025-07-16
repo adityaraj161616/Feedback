@@ -1,42 +1,44 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "../../../auth/[...nextauth]/route"
-import clientPromise from "@/lib/mongodb"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { connectToDatabase } from "@/lib/mongodb"
+import { ObjectId } from "mongodb"
 
 export async function PATCH(request: NextRequest, { params }: { params: { formId: string } }) {
   try {
     const session = await getServerSession(authOptions)
-
-    if (!session) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const { formId } = params
-    const { isActive } = await request.json()
+    const body = await request.json()
+    const { isActive } = body
 
-    const db = (await clientPromise).db("feedbackpro")
-    const forms = db.collection("forms")
+    const { db } = await connectToDatabase()
 
-    const result = await forms.updateOne(
-      { id: formId, userId: session.user.id },
+    const result = await db.collection("forms").updateOne(
+      {
+        $or: [
+          { id: formId, userId: session.user.email },
+          { _id: new ObjectId(formId), userId: session.user.email },
+        ],
+      },
       {
         $set: {
           isActive,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         },
       },
     )
 
     if (result.matchedCount === 0) {
-      return NextResponse.json({ error: "Form not found" }, { status: 404 })
+      return NextResponse.json({ error: "Form not found or unauthorized" }, { status: 404 })
     }
 
-    return NextResponse.json({
-      success: true,
-      message: `Form ${isActive ? "activated" : "deactivated"} successfully`,
-    })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error toggling form status:", error)
-    return NextResponse.json({ error: "Failed to update form status" }, { status: 500 })
+    console.error("PATCH /api/forms/[formId]/toggle error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

@@ -18,7 +18,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Settings, Palette, Shield, Link } from "lucide-react"
-import type { FormConfig } from "@/app/form-builder/page"
+
+interface FormConfig {
+  title: string
+  description: string
+  settings: {
+    submitMessage?: string
+    redirectUrl?: string
+    allowMultipleSubmissions?: boolean
+    requireAuth?: boolean
+    theme?: string
+    collectEmail?: boolean
+    allowAnonymous?: boolean
+  }
+}
 
 interface FormSettingsModalProps {
   formConfig: FormConfig
@@ -29,10 +42,26 @@ interface FormSettingsModalProps {
 export function FormSettingsModal({ formConfig, onUpdateFormConfig, children }: FormSettingsModalProps) {
   const [isOpen, setIsOpen] = useState(false)
 
+  // Provide default values if formConfig is undefined or incomplete
+  const safeFormConfig = {
+    title: formConfig?.title || "Untitled Form",
+    description: formConfig?.description || "",
+    settings: {
+      submitMessage: "Submit Feedback",
+      redirectUrl: "",
+      allowMultipleSubmissions: true,
+      requireAuth: false,
+      theme: "modern",
+      collectEmail: false,
+      allowAnonymous: true,
+      ...formConfig?.settings,
+    },
+  }
+
   const updateSettings = (key: string, value: any) => {
     onUpdateFormConfig({
       settings: {
-        ...formConfig.settings,
+        ...safeFormConfig.settings,
         [key]: value,
       },
     })
@@ -63,7 +92,7 @@ export function FormSettingsModal({ formConfig, onUpdateFormConfig, children }: 
               <div className="space-y-2">
                 <Label className="text-gray-300">Form Title</Label>
                 <Input
-                  value={formConfig.title}
+                  value={safeFormConfig.title}
                   onChange={(e) => onUpdateFormConfig({ title: e.target.value })}
                   className="bg-white/10 border-white/20 text-white"
                   placeholder="Enter form title"
@@ -73,7 +102,7 @@ export function FormSettingsModal({ formConfig, onUpdateFormConfig, children }: 
               <div className="space-y-2">
                 <Label className="text-gray-300">Form Description</Label>
                 <Textarea
-                  value={formConfig.description}
+                  value={safeFormConfig.description}
                   onChange={(e) => onUpdateFormConfig({ description: e.target.value })}
                   className="bg-white/10 border-white/20 text-white"
                   placeholder="Enter form description"
@@ -84,7 +113,7 @@ export function FormSettingsModal({ formConfig, onUpdateFormConfig, children }: 
               <div className="space-y-2">
                 <Label className="text-gray-300">Submit Button Text</Label>
                 <Input
-                  value={formConfig.settings.submitMessage}
+                  value={safeFormConfig.settings.submitMessage}
                   onChange={(e) => updateSettings("submitMessage", e.target.value)}
                   className="bg-white/10 border-white/20 text-white"
                   placeholder="Submit Feedback"
@@ -105,7 +134,7 @@ export function FormSettingsModal({ formConfig, onUpdateFormConfig, children }: 
               <div className="space-y-2">
                 <Label className="text-gray-300">Theme</Label>
                 <select
-                  value={formConfig.settings.theme}
+                  value={safeFormConfig.settings.theme}
                   onChange={(e) => updateSettings("theme", e.target.value)}
                   className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white"
                 >
@@ -133,7 +162,7 @@ export function FormSettingsModal({ formConfig, onUpdateFormConfig, children }: 
                   <p className="text-sm text-gray-500">Require users to provide their email</p>
                 </div>
                 <Switch
-                  checked={formConfig.settings.collectEmail}
+                  checked={safeFormConfig.settings.collectEmail}
                   onCheckedChange={(checked) => updateSettings("collectEmail", checked)}
                 />
               </div>
@@ -144,7 +173,7 @@ export function FormSettingsModal({ formConfig, onUpdateFormConfig, children }: 
                   <p className="text-sm text-gray-500">Let users submit without identifying themselves</p>
                 </div>
                 <Switch
-                  checked={formConfig.settings.allowAnonymous}
+                  checked={safeFormConfig.settings.allowAnonymous}
                   onCheckedChange={(checked) => updateSettings("allowAnonymous", checked)}
                 />
               </div>
@@ -163,7 +192,7 @@ export function FormSettingsModal({ formConfig, onUpdateFormConfig, children }: 
               <div className="space-y-2">
                 <Label className="text-gray-300">Redirect URL (Optional)</Label>
                 <Input
-                  value={formConfig.settings.redirectUrl || ""}
+                  value={safeFormConfig.settings.redirectUrl || ""}
                   onChange={(e) => updateSettings("redirectUrl", e.target.value)}
                   className="bg-white/10 border-white/20 text-white"
                   placeholder="https://example.com/thank-you"

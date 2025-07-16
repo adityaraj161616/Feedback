@@ -28,6 +28,21 @@ interface AdminHeaderProps {
 export function AdminHeader({ user }: AdminHeaderProps) {
   const [isExporting, setIsExporting] = useState(false)
 
+  const getInitials = (name?: string | null, email?: string | null) => {
+    if (name) {
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    if (email) {
+      return email.slice(0, 2).toUpperCase()
+    }
+    return "A"
+  }
+
   const handleExportData = async () => {
     setIsExporting(true)
     try {
@@ -99,19 +114,37 @@ export function AdminHeader({ user }: AdminHeaderProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.image || ""} alt={user.name || ""} />
-                    <AvatarFallback className="bg-gradient-to-r from-red-500 to-pink-500 text-white">
-                      {user.name?.charAt(0) || "A"}
+                    <AvatarImage
+                      src={user.image || ""}
+                      alt={user.name || user.email || "Admin"}
+                      className="object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <AvatarFallback className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-sm font-medium">
+                      {getInitials(user.name, user.email)}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 bg-gray-900 border-gray-700" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none text-white">{user.name}</p>
-                    <p className="text-xs leading-none text-gray-400">{user.email}</p>
-                    <Badge className="bg-red-500 text-white w-fit mt-1">Admin</Badge>
+                  <div className="flex items-center space-x-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={user.image || ""}
+                        alt={user.name || user.email || "Admin"}
+                        className="object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <AvatarFallback className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs">
+                        {getInitials(user.name, user.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none text-white">{user.name}</p>
+                      <p className="text-xs leading-none text-gray-400">{user.email}</p>
+                      <Badge className="bg-red-500 text-white w-fit mt-1">Admin</Badge>
+                    </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-700" />

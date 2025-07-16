@@ -56,27 +56,27 @@ interface FieldPaletteProps {
 
 export function FieldPalette({ onAddField }: FieldPaletteProps) {
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6 h-full overflow-y-auto">
       <Card className="bg-white/5 border-white/10">
-        <CardHeader>
-          <CardTitle className="text-white text-lg">Field Types</CardTitle>
-          <CardDescription className="text-gray-400">Drag or click to add fields to your form</CardDescription>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-white text-base md:text-lg">Field Types</CardTitle>
+          <CardDescription className="text-gray-400 text-sm">Drag or click to add fields to your form</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-2 md:space-y-3">
           {fieldTypes.map((fieldType) => (
             <Button
               key={fieldType.type}
               onClick={() => onAddField(fieldType.type)}
-              className={`w-full justify-start h-auto p-4 bg-gradient-to-r ${fieldType.color} hover:opacity-90 transition-all duration-200 group cursor-grab active:cursor-grabbing`}
+              className={`w-full justify-start h-auto p-3 md:p-4 bg-gradient-to-r ${fieldType.color} hover:opacity-90 transition-all duration-200 group cursor-grab active:cursor-grabbing`}
               draggable
             >
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <fieldType.icon className="h-4 w-4 text-white" />
+              <div className="flex items-center space-x-2 md:space-x-3">
+                <div className="p-1.5 md:p-2 bg-white/20 rounded-lg">
+                  <fieldType.icon className="h-3 w-3 md:h-4 md:w-4 text-white" />
                 </div>
                 <div className="text-left">
-                  <div className="font-medium text-white">{fieldType.label}</div>
-                  <div className="text-xs text-white/80">{fieldType.description}</div>
+                  <div className="font-medium text-white text-sm md:text-base">{fieldType.label}</div>
+                  <div className="text-xs text-white/80 hidden md:block">{fieldType.description}</div>
                 </div>
               </div>
             </Button>

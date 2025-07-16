@@ -168,7 +168,10 @@ export function HeroSection() {
   }
 
   return (
-    <section ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section
+      ref={heroRef}
+      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 md:pt-0"
+    >
       {/* Hero Background Image with Mask */}
       <div
         ref={videoMaskRef}
@@ -187,30 +190,30 @@ export function HeroSection() {
 
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-blue-500/5 to-blue-400/5 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-4 md:left-20 w-48 h-48 md:w-72 md:h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-4 md:right-20 w-64 h-64 md:w-96 md:h-96 bg-blue-400/10 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] md:w-[800px] md:h-[800px] bg-gradient-to-r from-blue-500/5 to-blue-400/5 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Left Column - Content */}
-          <div className="text-center lg:text-left">
+          <div className="text-center lg:text-left order-2 lg:order-1">
             <h1
               ref={headlineRef}
-              className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-blue-100 to-blue-200 bg-clip-text text-transparent leading-tight"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-white via-blue-100 to-blue-200 bg-clip-text text-transparent leading-tight"
             >
               Collect Feedback,
               <br />
               Understand Better.
             </h1>
 
-            <p ref={subheadRef} className="text-xl md:text-2xl text-blue-100 mb-8 font-medium">
+            <p ref={subheadRef} className="text-lg sm:text-xl md:text-2xl text-blue-100 mb-6 md:mb-8 font-medium">
               {/* Text will be animated in via GSAP */}
             </p>
 
-            <div className="mb-8">
-              <div className="flex items-center justify-center lg:justify-start space-x-6 text-sm text-blue-200">
+            <div className="mb-6 md:mb-8">
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-2 sm:space-y-0 sm:space-x-6 text-sm text-blue-200">
                 <div className="flex items-center space-x-2">
                   <Star className="h-4 w-4 text-yellow-400 fill-current" />
                   <span>4.9/5 Rating</span>
@@ -226,54 +229,59 @@ export function HeroSection() {
               </div>
             </div>
 
-            <div ref={ctaButtonsRef} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            <div
+              ref={ctaButtonsRef}
+              className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center lg:justify-start"
+            >
               <Button
                 size="lg"
-                className="magnetic-btn bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-8 py-4 text-lg font-semibold rounded-full shadow-2xl"
+                className="magnetic-btn bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-semibold rounded-full shadow-2xl w-full sm:w-auto"
                 onClick={handleAuthRedirect}
               >
                 Get Started Free
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
               </Button>
 
               <Button
                 size="lg"
                 variant="outline"
-                className="magnetic-btn border-2 border-white/30 text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-full backdrop-blur-sm bg-transparent"
+                className="magnetic-btn border-2 border-white/30 text-white hover:bg-white/10 px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-semibold rounded-full backdrop-blur-sm bg-transparent w-full sm:w-auto"
                 onClick={scrollToDemoSection}
               >
-                <Play className="mr-2 h-5 w-5" />
+                <Play className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                 Watch Demo
               </Button>
             </div>
           </div>
 
           {/* Right Column - Interactive Feedback Form */}
-          <div className="relative">
-            <div className="relative bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl">
-              <div className="space-y-6">
+          <div className="relative order-1 lg:order-2">
+            <div className="relative bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-8 border border-white/20 shadow-2xl">
+              <div className="space-y-4 md:space-y-6">
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                  <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                  <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                  <span className="text-sm text-blue-200 ml-4">Try our feedback form</span>
+                  <div className="w-2 h-2 md:w-3 md:h-3 bg-red-400 rounded-full"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 bg-yellow-400 rounded-full"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 bg-green-400 rounded-full"></div>
+                  <span className="text-xs md:text-sm text-blue-200 ml-2 md:ml-4">Try our feedback form</span>
                 </div>
 
                 {isDemoSubmitted ? (
-                  <div className="flex flex-col items-center justify-center py-12 demo-success-message">
-                    <CheckCircle className="h-16 w-16 text-green-400 mb-4" />
-                    <h3 className="text-2xl font-bold text-white mb-2">Thank You!</h3>
-                    <p className="text-gray-300 text-center">Your feedback helps us improve FeedbackPro.</p>
+                  <div className="flex flex-col items-center justify-center py-8 md:py-12 demo-success-message">
+                    <CheckCircle className="h-12 w-12 md:h-16 md:w-16 text-green-400 mb-3 md:mb-4" />
+                    <h3 className="text-xl md:text-2xl font-bold text-white mb-2">Thank You!</h3>
+                    <p className="text-gray-300 text-center text-sm md:text-base">
+                      Your feedback helps us improve FeedbackPro.
+                    </p>
                   </div>
                 ) : (
-                  <form onSubmit={handleDemoSubmit} className="space-y-4">
-                    <h3 className="text-xl font-semibold text-white">How would you rate FeedbackPro?</h3>
+                  <form onSubmit={handleDemoSubmit} className="space-y-3 md:space-y-4">
+                    <h3 className="text-lg md:text-xl font-semibold text-white">How would you rate FeedbackPro?</h3>
 
-                    <div className="flex space-x-2">
+                    <div className="flex justify-center space-x-1 md:space-x-2">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star
                           key={star}
-                          className={`h-8 w-8 cursor-pointer transition-all duration-200 ${
+                          className={`h-6 w-6 md:h-8 md:w-8 cursor-pointer transition-all duration-200 ${
                             star <= rating
                               ? "text-yellow-400 fill-current scale-110"
                               : "text-gray-600 hover:text-yellow-400 hover:scale-105"
@@ -283,12 +291,12 @@ export function HeroSection() {
                       ))}
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-2 md:space-y-3">
                       <Textarea
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
                         placeholder="Tell us what you think about our platform..."
-                        className="bg-white/10 border-white/20 text-white placeholder-gray-400 resize-none"
+                        className="bg-white/10 border-white/20 text-white placeholder-gray-400 resize-none text-sm md:text-base"
                         rows={3}
                         required
                       />
@@ -298,14 +306,14 @@ export function HeroSection() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="Your email (optional)"
-                        className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                        className="bg-white/10 border-white/20 text-white placeholder-gray-400 text-sm md:text-base"
                       />
                     </div>
 
                     <Button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 disabled:opacity-50"
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 py-2 md:py-3 text-sm md:text-base"
                     >
                       {isSubmitting ? (
                         <div className="flex items-center justify-center">
@@ -324,7 +332,7 @@ export function HeroSection() {
               </div>
 
               {/* Floating elements */}
-              <div className="absolute -top-4 -right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold animate-bounce">
+              <div className="absolute -top-2 -right-2 md:-top-4 md:-right-4 bg-blue-500 text-white px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold animate-bounce">
                 Live Demo
               </div>
             </div>

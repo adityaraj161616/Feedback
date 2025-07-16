@@ -106,30 +106,33 @@ export function RecentFeedback() {
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
-      <Star key={i} className={`h-4 w-4 ${i < rating ? "text-yellow-400 fill-current" : "text-gray-600"}`} />
+      <Star
+        key={i}
+        className={`h-3 w-3 sm:h-4 sm:w-4 ${i < rating ? "text-yellow-400 fill-current" : "text-gray-600"}`}
+      />
     ))
   }
 
   return (
     <Card
       ref={feedbackRef}
-      className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20"
+      className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20 min-w-0"
     >
-      <CardHeader>
-        <CardTitle className="text-white flex items-center">
-          <MessageSquare className="h-5 w-5 mr-2" />
-          Recent Feedback
+      <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-4">
+        <CardTitle className="text-white flex items-center text-base sm:text-lg">
+          <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+          <span className="truncate">Recent Feedback</span>
         </CardTitle>
-        <CardDescription className="text-gray-400">Latest responses from your forms</CardDescription>
+        <CardDescription className="text-gray-400 text-xs sm:text-sm">Latest responses from your forms</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6 pb-3 sm:pb-6">
         {feedback.map((item) => (
           <div
             key={item.id}
-            className="feedback-item p-4 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200"
+            className="feedback-item p-3 sm:p-4 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-200 min-w-0"
           >
-            <div className="flex items-start space-x-3">
-              <Avatar className="h-8 w-8">
+            <div className="flex items-start space-x-2 sm:space-x-3">
+              <Avatar className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0">
                 <AvatarImage src={item.avatar || ""} />
                 <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs">
                   {item.user.charAt(0)}
@@ -137,25 +140,33 @@ export function RecentFeedback() {
               </Avatar>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-white">{item.user}</span>
-                    <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
+                <div className="flex items-center justify-between mb-1 sm:mb-2">
+                  <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
+                    <span className="text-xs sm:text-sm font-medium text-white truncate">{item.user}</span>
+                    <Badge variant="outline" className="text-xs border-gray-600 text-gray-400 hidden sm:inline-flex">
                       {item.form}
                     </Badge>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-2 h-2 rounded-full ${getSentimentColor(item.sentiment)}`} />
+                  <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${getSentimentColor(item.sentiment)}`} />
                     <span className="text-xs text-gray-400 flex items-center">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {item.timestamp}
+                      <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
+                      <span className="hidden sm:inline">{item.timestamp}</span>
+                      <span className="sm:hidden">{item.timestamp.split(" ")[0]}</span>
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-1 mb-2">{renderStars(item.rating)}</div>
+                <div className="flex items-center space-x-1 mb-1 sm:mb-2">{renderStars(item.rating)}</div>
 
-                <p className="text-sm text-gray-300 line-clamp-2">{item.comment}</p>
+                <p className="text-xs sm:text-sm text-gray-300 line-clamp-2 break-words">{item.comment}</p>
+
+                {/* Show form badge on mobile */}
+                <div className="sm:hidden mt-2">
+                  <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
+                    {item.form}
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>

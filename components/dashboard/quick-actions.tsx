@@ -50,36 +50,39 @@ export function QuickActions() {
   }, [])
 
   return (
-    <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20">
-      <CardHeader>
-        <CardTitle className="text-white flex items-center">
-          <Zap className="h-5 w-5 mr-2" />
-          Quick Actions
+    <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20 min-w-0">
+      <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-4">
+        <CardTitle className="text-white flex items-center text-base sm:text-lg">
+          <Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+          <span className="truncate">Quick Actions</span>
         </CardTitle>
-        <CardDescription className="text-gray-400">Common tasks and shortcuts</CardDescription>
+        <CardDescription className="text-gray-400 text-xs sm:text-sm">Common tasks and shortcuts</CardDescription>
       </CardHeader>
-      <CardContent ref={actionsRef} className="space-y-3">
+      <CardContent ref={actionsRef} className="space-y-2 sm:space-y-3 px-3 sm:px-6 pb-3 sm:pb-6">
         {actions.map((action, index) => (
           <Button
             key={index}
             onClick={action.action}
-            className={`action-button w-full justify-start h-auto p-4 bg-gradient-to-r ${action.color} hover:opacity-90 transition-all duration-200 group`}
+            className={`action-button w-full justify-start h-auto p-3 sm:p-4 bg-gradient-to-r ${action.color} hover:opacity-90 transition-all duration-200 group min-w-0`}
           >
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <action.icon className="h-4 w-4 text-white" />
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+              <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg flex-shrink-0">
+                <action.icon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
               </div>
-              <div className="text-left">
-                <div className="font-medium text-white">{action.title}</div>
-                <div className="text-xs text-white/80">{action.description}</div>
+              <div className="text-left min-w-0 flex-1">
+                <div className="font-medium text-white text-xs sm:text-sm truncate">{action.title}</div>
+                <div className="text-xs text-white/80 truncate hidden sm:block">{action.description}</div>
               </div>
             </div>
           </Button>
         ))}
 
-        <div className="pt-4 border-t border-white/10">
-          <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10 bg-transparent">
-            <Settings className="h-4 w-4 mr-2" />
+        <div className="pt-3 sm:pt-4 border-t border-white/10">
+          <Button
+            variant="outline"
+            className="w-full border-white/20 text-white hover:bg-white/10 bg-transparent text-xs sm:text-sm h-auto py-2 sm:py-3"
+          >
+            <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
             Settings & Preferences
           </Button>
         </div>

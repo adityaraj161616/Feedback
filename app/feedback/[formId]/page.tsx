@@ -2,271 +2,287 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
-import { useParams } from "next/navigation"
-import { gsap } from "gsap"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Star, Send, CheckCircle, ArrowLeft } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "sonner"
+import { Star, Send, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 
-interface FormData {
+interface FormField {
+  id: string
+  type: "text" | "textarea" | "select" | "radio" | "checkbox" | "rating" | "email" | "number" | "emoji"
+  label: string
+  placeholder?: string
+  required?: boolean
+  options?: string[]
+  validation?: {
+    min?: number
+    max?: number
+    pattern?: string
+    message?: string
+  }
+}
+
+interface Form {
   id: string
   title: string
   description: string
-  fields: any[]
-  settings: any
+  fields: FormField[]
   userId: string
+  isActive: boolean
+  settings?: {
+    allowAnonymous?: boolean
+    requireAuth?: boolean
+    collectEmail?: boolean
+    thankYouMessage?: string
+    redirectUrl?: string
+  }
 }
 
-export default function FeedbackForm() {
+export default function FeedbackFormPage() {
   const params = useParams()
+  const router = useRouter()
   const formId = params.formId as string
-  const [formData, setFormData] = useState<FormData | null>(null)
-  const [responses, setResponses] = useState<Record<string, any>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
+
+  const [form, setForm] = useState<Form | null>(null)
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const formRef = useRef<HTMLDivElement>(null)
-  const successRef = useRef<HTMLDivElement>(null)
+  const [responses, setResponses] = useState<Record<string, any>>({})
 
   useEffect(() => {
-    fetchForm()
-  }, [formId])
-
-  useEffect(() => {
-    if (formData && !loading) {
-      // Form entrance animation
-      gsap.fromTo(
-        formRef.current,
-        { opacity: 0, y: 50, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 1, ease: "back.out(1.7)" },
-      )
-
-      // Stagger field animations
-      gsap.fromTo(
-        ".form-field",
-        { opacity: 0, x: -30 },
-        { opacity: 1, x: 0, duration: 0.6, stagger: 0.1, ease: "power2.out", delay: 0.3 },
-      )
+    if (formId) {
+      fetchForm()
     }
-  }, [formData, loading])
+  }, [formId])
 
   const fetchForm = async () => {
     try {
-      console.log("Frontend: Fetching form with ID:", formId)
+      setLoading(true)
+      setError(null)
+
+      console.log("Fetching form:", formId)
       const response = await fetch(`/api/forms/${formId}`)
 
       if (response.ok) {
-        const data = await response.json()
-        console.log("Frontend: Fetched form data:", data)
-
-        // Validate that we have the required fields
-        if (!data.userId) {
-          console.error("Frontend: Form data missing userId:", data)
-          setError("Form configuration error: missing owner information")
-          setFormData(null)
-        } else {
-          setFormData(data)
-          setError(null)
-        }
+        const formData = await response.json()
+        console.log("Form data received:", formData)
+        setForm(formData)
       } else {
         const errorData = await response.json()
         console.error("Frontend: Form fetch failed:", response.status, errorData)
-        setError("Form not found or is not active")
-        setFormData(null)
+        if (response.status === 403) {
+          setError("This form is currently inactive")
+        } else if (response.status === 404) {
+          setError("Form not found")
+        } else {
+          setError("Failed to load form")
+        }
       }
     } catch (error) {
-      console.error("Frontend: Error fetching form:", error)
-      setError("Failed to load form")
-      setFormData(null)
+      console.error("Error fetching form:", error)
+      setError("Network error - please try again")
     } finally {
       setLoading(false)
     }
   }
 
-  const handleFieldChange = (fieldId: string, value: any) => {
-    setResponses((prev) => ({ ...prev, [fieldId]: value }))
+  const handleInputChange = (fieldId: string, value: any) => {
+    setResponses((prev) => ({
+      ...prev,
+      [fieldId]: value,
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
+
+    if (!form) return
 
     // Validate required fields
-    const requiredFields = formData?.fields.filter((field) => field.required) || []
-    const missingFields = requiredFields.filter((field) => !responses[field.id])
+    const missingFields = form.fields
+      .filter((field) => field.required && !responses[field.id])
+      .map((field) => field.label)
 
     if (missingFields.length > 0) {
-      alert("Please fill in all required fields")
-      setIsSubmitting(false)
-      return
-    }
-
-    // Check if we have the form owner's userId
-    if (!formData?.userId) {
-      console.error("Frontend: Form data:", formData)
-      alert("Form owner information is missing. Cannot submit feedback.")
-      setIsSubmitting(false)
+      toast.error(`Please fill in required fields: ${missingFields.join(", ")}`)
       return
     }
 
     try {
-      console.log("Frontend: Submitting feedback with userId:", formData.userId)
+      setSubmitting(true)
 
       const response = await fetch("/api/feedback", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          formId,
+          formId: form.id,
           responses,
-          userId: formData.userId,
-          timestamp: new Date().toISOString(),
+          submittedAt: new Date().toISOString(),
         }),
       })
 
       if (response.ok) {
-        const result = await response.json()
-        console.log("Frontend: Feedback submitted successfully:", result)
-        setIsSubmitted(true)
+        setSubmitted(true)
+        toast.success("Feedback submitted successfully!")
 
-        // Success animation
-        gsap.to(formRef.current, {
-          opacity: 0,
-          scale: 0.95,
-          duration: 0.5,
-          ease: "power2.in",
-          onComplete: () => {
-            gsap.fromTo(
-              successRef.current,
-              { opacity: 0, scale: 0.8, y: 50 },
-              { opacity: 1, scale: 1, y: 0, duration: 1, ease: "back.out(1.7)" },
-            )
-          },
-        })
+        // Redirect if specified
+        if (form.settings?.redirectUrl) {
+          setTimeout(() => {
+            window.location.href = form.settings.redirectUrl!
+          }, 2000)
+        }
       } else {
         const errorData = await response.json()
-        console.error("Frontend: Feedback submission error:", errorData)
-        alert(`Error submitting feedback: ${errorData.error || "Unknown error"}`)
+        toast.error(errorData.error || "Failed to submit feedback")
       }
     } catch (error) {
-      console.error("Frontend: Error submitting feedback:", error)
-      alert("Error submitting feedback. Please try again.")
+      console.error("Error submitting feedback:", error)
+      toast.error("Network error - please try again")
     } finally {
-      setIsSubmitting(false)
+      setSubmitting(false)
     }
   }
 
-  const renderField = (field: any) => {
+  const renderField = (field: FormField) => {
     const value = responses[field.id] || ""
 
     switch (field.type) {
       case "text":
+      case "email":
+      case "number":
         return (
           <Input
+            type={field.type}
+            placeholder={field.placeholder}
             value={value}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            placeholder={field.placeholder || "Enter your response..."}
-            className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+            onChange={(e) => handleInputChange(field.id, e.target.value)}
             required={field.required}
+            className="bg-white/10 border-white/20 text-white placeholder-gray-400"
           />
         )
 
       case "textarea":
         return (
           <Textarea
+            placeholder={field.placeholder}
             value={value}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            placeholder={field.placeholder || "Enter your detailed response..."}
-            className="bg-white/10 border-white/20 text-white placeholder-gray-400"
-            rows={4}
+            onChange={(e) => handleInputChange(field.id, e.target.value)}
             required={field.required}
+            className="bg-white/10 border-white/20 text-white placeholder-gray-400 min-h-[100px]"
           />
         )
 
-      case "rating":
+      case "select":
         return (
-          <div className="flex space-x-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                className={`h-8 w-8 cursor-pointer transition-all duration-200 ${
-                  star <= (value || 0)
-                    ? "text-yellow-400 fill-current scale-110"
-                    : "text-gray-600 hover:text-yellow-400 hover:scale-105"
-                }`}
-                onClick={() => handleFieldChange(field.id, star)}
-              />
+          <Select value={value} onValueChange={(val) => handleInputChange(field.id, val)}>
+            <SelectTrigger className="bg-white/10 border-white/20 text-white">
+              <SelectValue placeholder={field.placeholder || "Select an option"} />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              {field.options?.map((option, index) => (
+                <SelectItem key={index} value={option} className="text-white hover:bg-gray-700">
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )
+
+      case "radio":
+        return (
+          <RadioGroup value={value} onValueChange={(val) => handleInputChange(field.id, val)}>
+            {field.options?.map((option, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <RadioGroupItem value={option} id={`${field.id}-${index}`} className="border-white/20" />
+                <Label htmlFor={`${field.id}-${index}`} className="text-white">
+                  {option}
+                </Label>
+              </div>
             ))}
-            {value > 0 && <span className="ml-3 text-gray-300 self-center">({value}/5)</span>}
+          </RadioGroup>
+        )
+
+      case "checkbox":
+        const checkboxValues = Array.isArray(value) ? value : []
+        return (
+          <div className="space-y-2">
+            {field.options?.map((option, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`${field.id}-${index}`}
+                  checked={checkboxValues.includes(option)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      handleInputChange(field.id, [...checkboxValues, option])
+                    } else {
+                      handleInputChange(
+                        field.id,
+                        checkboxValues.filter((v: string) => v !== option),
+                      )
+                    }
+                  }}
+                  className="border-white/20"
+                />
+                <Label htmlFor={`${field.id}-${index}`} className="text-white">
+                  {option}
+                </Label>
+              </div>
+            ))}
           </div>
         )
 
-      case "emoji":
-        const emojis = [
-          { emoji: "😢", label: "Very Dissatisfied" },
-          { emoji: "😐", label: "Dissatisfied" },
-          { emoji: "😊", label: "Neutral" },
-          { emoji: "😍", label: "Satisfied" },
-          { emoji: "🤩", label: "Very Satisfied" },
-        ]
+      case "rating":
+        const rating = Number(value) || 0
         return (
-          <div className="flex space-x-3">
-            {emojis.map((item, index) => (
+          <div className="flex space-x-1">
+            {[1, 2, 3, 4, 5].map((star) => (
               <button
-                key={index}
+                key={star}
                 type="button"
-                className={`flex flex-col items-center p-3 rounded-xl transition-all duration-200 ${
-                  value === index ? "bg-purple-500/30 scale-110 shadow-lg" : "hover:bg-white/10 hover:scale-105"
+                onClick={() => handleInputChange(field.id, star)}
+                className={`p-1 transition-colors ${
+                  star <= rating ? "text-yellow-400" : "text-gray-400 hover:text-yellow-300"
                 }`}
-                onClick={() => handleFieldChange(field.id, index)}
               >
-                <span className="text-3xl mb-1">{item.emoji}</span>
-                <span className="text-xs text-gray-400">{item.label}</span>
+                <Star className="h-6 w-6 fill-current" />
               </button>
             ))}
           </div>
         )
 
-      case "select":
+      case "emoji":
+        const emojis = ["😢", "😐", "😊", "😍", "🤩"]
+        const emojiLabels = ["Very Sad", "Neutral", "Happy", "Love It", "Amazing"]
         return (
-          <select
-            value={value}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-            required={field.required}
-          >
-            <option value="">Select an option...</option>
-            {field.options?.map((option: string, index: number) => (
-              <option key={index} value={option} className="bg-gray-800">
-                {option}
-              </option>
+          <div className="flex flex-wrap gap-3">
+            {emojis.map((emoji, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleInputChange(field.id, emoji)}
+                className={`flex flex-col items-center p-3 rounded-lg transition-all duration-200 ${
+                  value === emoji
+                    ? "bg-purple-500/30 scale-110 border-2 border-purple-400"
+                    : "bg-white/10 hover:bg-white/20 hover:scale-105 border border-white/20"
+                }`}
+                title={emojiLabels[index]}
+              >
+                <span className="text-3xl mb-1">{emoji}</span>
+                <span className="text-xs text-gray-300">{emojiLabels[index]}</span>
+              </button>
             ))}
-          </select>
-        )
-
-      case "file":
-        return (
-          <div className="border-2 border-dashed border-white/20 rounded-lg p-8 text-center hover:border-white/40 transition-colors">
-            <input
-              type="file"
-              onChange={(e) => handleFieldChange(field.id, e.target.files?.[0])}
-              className="hidden"
-              id={`file-${field.id}`}
-              accept={field.settings?.allowedTypes || "image/*,.pdf"}
-            />
-            <label htmlFor={`file-${field.id}`} className="cursor-pointer">
-              <div className="text-gray-400 mb-2">Click to upload or drag and drop</div>
-              <div className="text-sm text-gray-500">
-                {field.settings?.allowedTypes || "PNG, JPG, PDF"} up to {field.settings?.maxSize || 10}MB
-              </div>
-              {value && <div className="text-green-400 mt-2">File selected: {value.name}</div>}
-            </label>
           </div>
         )
 
@@ -277,25 +293,46 @@ export default function FeedbackForm() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading form...</div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center px-4">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-purple-500 mx-auto mb-4" />
+          <div className="text-white text-xl">Loading form...</div>
+        </div>
       </div>
     )
   }
 
-  if (error || !formData) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <Card className="bg-white/10 backdrop-blur-md border border-white/20 p-8 text-center">
-          <CardContent>
-            <h1 className="text-2xl font-bold text-white mb-4">{error ? "Error Loading Form" : "Form Not Found"}</h1>
-            <p className="text-gray-300 mb-6">
-              {error || "The feedback form you're looking for doesn't exist or has been removed."}
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center px-4">
+        <Card className="w-full max-w-md bg-white/10 border-white/20">
+          <CardContent className="p-8 text-center">
+            <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-white text-xl font-bold mb-2">Error</h2>
+            <p className="text-gray-400 mb-4">{error}</p>
+            <Button onClick={fetchForm} className="bg-purple-500 hover:bg-purple-600">
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center px-4">
+        <Card className="w-full max-w-md bg-white/10 border-white/20">
+          <CardContent className="p-8 text-center">
+            <CheckCircle className="h-16 w-16 text-green-400 mx-auto mb-4" />
+            <h2 className="text-white text-2xl font-bold mb-4">Thank You!</h2>
+            <p className="text-gray-400 mb-6">
+              {form?.settings?.thankYouMessage || "Your feedback has been submitted successfully."}
             </p>
             <Link href="/">
               <Button className="bg-gradient-to-r from-purple-500 to-blue-500">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Go Home
+                Back to Home
               </Button>
             </Link>
           </CardContent>
@@ -304,98 +341,72 @@ export default function FeedbackForm() {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 py-12 px-4">
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+  if (!form) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center px-4">
+        <Card className="w-full max-w-md bg-white/10 border-white/20">
+          <CardContent className="p-8 text-center">
+            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-white text-xl font-bold mb-2">Form Not Found</h2>
+            <p className="text-gray-400 mb-4">The requested form could not be found.</p>
+            <Link href="/">
+              <Button className="bg-purple-500 hover:bg-purple-600">Back to Home</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
+    )
+  }
 
-      <div className="relative z-10 max-w-2xl mx-auto">
-        {!isSubmitted ? (
-          <Card
-            ref={formRef}
-            className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20 shadow-2xl"
-          >
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold text-white mb-2">{formData.title}</CardTitle>
-              {formData.description && <p className="text-gray-300 text-lg">{formData.description}</p>}
-            </CardHeader>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black py-8 px-4">
+      <div className="max-w-2xl mx-auto">
+        <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-2xl">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl md:text-3xl font-bold text-white mb-2">{form.title}</CardTitle>
+            {form.description && (
+              <CardDescription className="text-gray-300 text-base">{form.description}</CardDescription>
+            )}
+          </CardHeader>
 
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-8">
-                {formData.fields.map((field, index) => (
-                  <div key={field.id} className="form-field space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Label className="text-gray-200 font-medium text-lg">{field.label}</Label>
-                      {field.required && (
-                        <Badge variant="destructive" className="text-xs">
-                          Required
-                        </Badge>
-                      )}
-                    </div>
-                    {field.settings?.helpText && <p className="text-sm text-gray-400">{field.settings.helpText}</p>}
-                    {renderField(field)}
-                  </div>
-                ))}
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {form.fields.map((field) => (
+                <div key={field.id} className="space-y-3">
+                  <Label className="text-white font-medium text-base">
+                    {field.label}
+                    {field.required && <span className="text-red-400 ml-1">*</span>}
+                  </Label>
+                  {renderField(field)}
+                </div>
+              ))}
 
+              <div className="pt-6">
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-4 text-lg rounded-xl shadow-lg transition-all duration-200 disabled:opacity-50"
+                  disabled={submitting}
+                  className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-medium py-3 text-lg"
                 >
-                  {isSubmitting ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="animate-spin h-5 w-5 mr-2" />
                       Submitting...
-                    </div>
+                    </>
                   ) : (
                     <>
                       <Send className="h-5 w-5 mr-2" />
-                      {formData.settings?.submitMessage || "Submit Feedback"}
+                      Submit Feedback
                     </>
                   )}
                 </Button>
-              </form>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card
-            ref={successRef}
-            className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-md border border-green-400/30 shadow-2xl text-center"
-          >
-            <CardContent className="p-12">
-              <div className="mb-6">
-                <CheckCircle className="h-16 w-16 text-green-400 mx-auto mb-4" />
-                <h1 className="text-3xl font-bold text-white mb-2">Thank You!</h1>
-                <p className="text-gray-300 text-lg">
-                  {formData.settings?.submitMessage || "Your feedback has been submitted successfully."}
-                </p>
               </div>
+            </form>
+          </CardContent>
+        </Card>
 
-              <div className="space-y-4">
-                <p className="text-gray-400">We appreciate you taking the time to share your thoughts with us.</p>
-
-                {formData.settings?.redirectUrl ? (
-                  <Button
-                    onClick={() => (window.location.href = formData.settings.redirectUrl)}
-                    className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                  >
-                    Continue
-                  </Button>
-                ) : (
-                  <Link href="/">
-                    <Button className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back to Home
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-400">Powered by FeedbackPro</p>
+        </div>
       </div>
     </div>
   )

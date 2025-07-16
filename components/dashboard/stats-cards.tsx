@@ -78,23 +78,23 @@ export function StatsCards() {
       {animatedStats.map((stat, index) => (
         <Card
           key={index}
-          className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20 hover:border-white/40 transition-all duration-300 cursor-pointer group"
+          className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20 hover:border-white/40 transition-all duration-300 cursor-pointer group min-w-0"
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-white transition-colors truncate pr-2">
               {stat.title}
             </CardTitle>
-            <div className={`p-2 rounded-lg bg-gradient-to-r ${stat.color}`}>
-              <stat.icon className="h-4 w-4 text-white" />
+            <div className={`p-1.5 sm:p-2 rounded-lg bg-gradient-to-r ${stat.color} flex-shrink-0`}>
+              <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white mb-1">
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            <div className="text-lg sm:text-2xl font-bold text-white mb-1 truncate">
               {formatValue(stat.value, stat.decimals, stat.suffix)}
             </div>
             <p className="text-xs text-green-400 flex items-center">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              {stat.change} from last month
+              <TrendingUp className="h-3 w-3 mr-1 flex-shrink-0" />
+              <span className="truncate">{stat.change} from last month</span>
             </p>
           </CardContent>
         </Card>

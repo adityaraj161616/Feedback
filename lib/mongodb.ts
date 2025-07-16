@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb"
+import { MongoClient, type Db } from "mongodb"
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
@@ -32,9 +32,18 @@ if (process.env.NODE_ENV === "development") {
 // separate module, the client can be shared across functions.
 export default clientPromise
 
-// Also export a function for explicit database connection
-export async function connectToDatabase() {
-  const client = await clientPromise
-  const db = client.db("feedbackpro")
-  return { client, db }
+export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
+  try {
+    const client = await clientPromise
+    const db = client.db(process.env.MONGODB_DB || "feedbackpro")
+
+    // Test the connection
+    await db.admin().ping()
+    console.log("Successfully connected to MongoDB")
+
+    return { client, db }
+  } catch (error) {
+    console.error("Failed to connect to MongoDB:", error)
+    throw new Error("Database connection failed")
+  }
 }

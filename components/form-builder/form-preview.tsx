@@ -33,7 +33,7 @@ export function FormPreview({ formConfig, fullscreen = false }: FormPreviewProps
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             placeholder={field.placeholder || "Enter your response..."}
-            className="bg-white/10 border-white/20 text-white"
+            className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
           />
         )
 
@@ -43,7 +43,7 @@ export function FormPreview({ formConfig, fullscreen = false }: FormPreviewProps
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             placeholder={field.placeholder || "Enter your detailed response..."}
-            className="bg-white/10 border-white/20 text-white"
+            className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
             rows={3}
           />
         )
@@ -88,7 +88,9 @@ export function FormPreview({ formConfig, fullscreen = false }: FormPreviewProps
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
           >
-            <option value="">Select an option...</option>
+            <option value="" className="bg-gray-800">
+              Select an option...
+            </option>
             {field.options?.map((option: string, index: number) => (
               <option key={index} value={option} className="bg-gray-800">
                 {option}
@@ -111,10 +113,16 @@ export function FormPreview({ formConfig, fullscreen = false }: FormPreviewProps
     }
   }
 
+  // Provide default values if formConfig is undefined
+  const title = formConfig?.title || "Untitled Form"
+  const description = formConfig?.description || ""
+  const fields = formConfig?.fields || []
+  const settings = formConfig?.settings || {}
+
   return (
-    <div className={`${fullscreen ? "p-8" : "p-6"} h-full overflow-y-auto`}>
+    <div className={`${fullscreen ? "p-4 md:p-8" : "p-6"} h-full overflow-y-auto`}>
       {/* Preview Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
           <h3 className="text-lg font-semibold text-white">Live Preview</h3>
           <p className="text-sm text-gray-400">See how your form will look to users</p>
@@ -129,6 +137,7 @@ export function FormPreview({ formConfig, fullscreen = false }: FormPreviewProps
             className="h-8 px-3"
           >
             <Monitor className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Desktop</span>
           </Button>
           <Button
             size="sm"
@@ -137,26 +146,27 @@ export function FormPreview({ formConfig, fullscreen = false }: FormPreviewProps
             className="h-8 px-3"
           >
             <Smartphone className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Mobile</span>
           </Button>
         </div>
       </div>
 
       {/* Form Preview */}
-      <div className={`mx-auto ${viewMode === "mobile" ? "max-w-sm" : "max-w-2xl"}`}>
+      <div className={`mx-auto transition-all duration-300 ${viewMode === "mobile" ? "max-w-sm" : "max-w-2xl"}`}>
         <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20">
           <CardHeader>
-            <CardTitle className="text-white text-xl">{formConfig.title}</CardTitle>
-            {formConfig.description && <p className="text-gray-300">{formConfig.description}</p>}
+            <CardTitle className="text-white text-xl">{title}</CardTitle>
+            {description && <p className="text-gray-300">{description}</p>}
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {formConfig.fields.length === 0 ? (
+            {fields.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-lg mb-2">No fields to preview</div>
-                <div className="text-gray-500 text-sm">Add fields to see the preview</div>
+                <div className="text-gray-500 text-sm">Add fields from the palette to see the preview</div>
               </div>
             ) : (
-              formConfig.fields.map((field) => (
+              fields.map((field) => (
                 <div key={field.id} className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <Label className="text-gray-300">{field.label}</Label>
@@ -171,19 +181,24 @@ export function FormPreview({ formConfig, fullscreen = false }: FormPreviewProps
               ))
             )}
 
-            {formConfig.fields.length > 0 && (
+            {fields.length > 0 && (
               <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
-                {formConfig.settings.submitMessage || "Submit Feedback"}
+                {settings.submitMessage || "Submit Feedback"}
               </Button>
             )}
           </CardContent>
         </Card>
 
         {/* Preview Stats */}
-        {formConfig.fields.length > 0 && (
+        {fields.length > 0 && (
           <div className="mt-4 text-center text-sm text-gray-400">
-            <div>Form has {formConfig.fields.length} fields</div>
-            <div>Estimated completion time: {Math.ceil(formConfig.fields.length * 0.5)} minutes</div>
+            <div>
+              Form has {fields.length} field{fields.length !== 1 ? "s" : ""}
+            </div>
+            <div>
+              Estimated completion time: {Math.ceil(fields.length * 0.5)} minute
+              {Math.ceil(fields.length * 0.5) !== 1 ? "s" : ""}
+            </div>
           </div>
         )}
       </div>

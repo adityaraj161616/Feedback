@@ -1,19 +1,12 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
 import { signOut } from "next-auth/react"
-import { gsap } from "gsap"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Bell, Settings, LogOut, Plus, Zap } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Menu, LogOut, Settings, BarChart3, FileText, Plus } from "lucide-react"
 import Link from "next/link"
 
 interface DashboardHeaderProps {
@@ -21,118 +14,177 @@ interface DashboardHeaderProps {
     name?: string | null
     email?: string | null
     image?: string | null
-    role?: string
-  } | null
+  }
 }
 
 export function DashboardHeader({ user }: DashboardHeaderProps) {
-  const [notifications, setNotifications] = useState(3)
-  const bellRef = useRef<HTMLButtonElement>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  useEffect(() => {
-    // Bell notification animation
-    if (notifications > 0) {
-      gsap.to(bellRef.current, {
-        rotation: 15,
-        duration: 0.1,
-        repeat: 5,
-        yoyo: true,
-        ease: "power2.inOut",
-      })
+  const getInitials = (name?: string | null, email?: string | null) => {
+    if (name) {
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
     }
-  }, [notifications])
-
-  const handleCreateForm = () => {
-    // Navigate to form builder
-    window.location.href = "/form-builder"
+    if (email) {
+      return email.slice(0, 2).toUpperCase()
+    }
+    return "U"
   }
 
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
+    { name: "Forms", href: "/forms", icon: FileText },
+    { name: "Analytics", href: "/analytics", icon: BarChart3 },
+    { name: "Create Form", href: "/form-builder", icon: Plus },
+  ]
+
   return (
-    <header className="bg-black/50 backdrop-blur-md border-b border-white/10 sticky top-0 z-40">
+    <header className="bg-black/20 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <Zap className="h-8 w-8 text-purple-400" />
-            <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+          <div className="flex items-center">
+            <Link href="/dashboard" className="text-xl font-bold text-white">
               FeedbackPro
-            </span>
-          </Link>
+            </Link>
+          </div>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors">
-              Dashboard
-            </Link>
-            <Link href="/forms" className="text-gray-300 hover:text-white transition-colors">
-              Forms
-            </Link>
-            <Link href="/analytics" className="text-gray-300 hover:text-white transition-colors">
-              Analytics
-            </Link>
-            {user?.role === "admin" && (
-              <Link href="/admin" className="text-gray-300 hover:text-white transition-colors">
-                Admin
-              </Link>
-            )}
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex space-x-8">
+            {navigation.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{item.name}</span>
+                </Link>
+              )
+            })}
           </nav>
 
-          {/* Actions */}
+          {/* User Menu */}
           <div className="flex items-center space-x-4">
-            {/* Create Form Button */}
-            <Button
-              onClick={handleCreateForm}
-              className="magnetic-btn bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Form
-            </Button>
-
-            {/* Notifications */}
-            <Button ref={bellRef} variant="ghost" size="icon" className="relative text-gray-300 hover:text-white">
-              <Bell className="h-5 w-5" />
-              {notifications > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                  {notifications}
-                </span>
-              )}
-            </Button>
-
-            {/* User Menu */}
-            {user && (
+            {/* Desktop User Menu */}
+            <div className="hidden md:block">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.image || ""} alt={user.name || ""} />
-                      <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-                        {user.name?.charAt(0) || "U"}
+                      <AvatarImage
+                        src={user?.image || ""}
+                        alt={user?.name || user?.email || "User"}
+                        className="object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-medium">
+                        {getInitials(user?.name, user?.email)}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 bg-gray-900 border-gray-700" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none text-white">{user.name}</p>
-                      <p className="text-xs leading-none text-gray-400">{user.email}</p>
+                <DropdownMenuContent className="w-56 bg-gray-800 border-gray-700" align="end" forceMount>
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={user?.image || ""}
+                        alt={user?.name || user?.email || "User"}
+                        className="object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs">
+                        {getInitials(user?.name, user?.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col space-y-1 leading-none">
+                      {user?.name && <p className="font-medium text-white">{user.name}</p>}
+                      {user?.email && <p className="w-[200px] truncate text-sm text-gray-400">{user.email}</p>}
                     </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-gray-700" />
-                  <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-gray-800">
+                  </div>
+                  <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-gray-700">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="text-gray-300 hover:text-white hover:bg-gray-800"
-                    onClick={() => signOut({ callbackUrl: "/" })}
+                    className="text-red-400 hover:text-red-300 hover:bg-gray-700"
+                    onClick={() => signOut()}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
+            </div>
+
+            {/* Mobile Menu */}
+            <div className="md:hidden">
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-white">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="bg-gray-900 border-gray-700 w-80">
+                  <div className="flex flex-col h-full">
+                    {/* User Info */}
+                    <div className="flex items-center space-x-3 p-4 border-b border-gray-700">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage
+                          src={user?.image || ""}
+                          alt={user?.name || user?.email || "User"}
+                          className="object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <AvatarFallback className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
+                          {getInitials(user?.name, user?.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        {user?.name && <p className="font-medium text-white">{user.name}</p>}
+                        {user?.email && <p className="text-sm text-gray-400 truncate">{user.email}</p>}
+                      </div>
+                    </div>
+
+                    {/* Navigation */}
+                    <nav className="flex-1 px-4 py-6 space-y-2">
+                      {navigation.map((item) => {
+                        const Icon = item.icon
+                        return (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center space-x-3 text-gray-300 hover:text-white hover:bg-gray-800 px-3 py-2 rounded-md transition-colors"
+                          >
+                            <Icon className="h-5 w-5" />
+                            <span>{item.name}</span>
+                          </Link>
+                        )
+                      })}
+                    </nav>
+
+                    {/* Sign Out */}
+                    <div className="p-4 border-t border-gray-700">
+                      <Button
+                        onClick={() => signOut()}
+                        variant="ghost"
+                        className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-gray-800"
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sign Out
+                      </Button>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
       </div>

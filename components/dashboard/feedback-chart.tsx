@@ -33,12 +33,17 @@ export function FeedbackChart({ data = chartData }: FeedbackChartProps) {
   }, [])
 
   return (
-    <Card ref={chartRef} className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20">
-      <CardHeader>
-        <CardTitle className="text-white">Feedback Trends</CardTitle>
-        <CardDescription className="text-gray-400">Monthly feedback volume and sentiment analysis</CardDescription>
+    <Card
+      ref={chartRef}
+      className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20 min-w-0"
+    >
+      <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-4">
+        <CardTitle className="text-white text-base sm:text-lg">Feedback Trends</CardTitle>
+        <CardDescription className="text-gray-400 text-xs sm:text-sm">
+          Monthly feedback volume and sentiment analysis
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
         <ChartContainer
           config={{
             feedback: {
@@ -50,10 +55,10 @@ export function FeedbackChart({ data = chartData }: FeedbackChartProps) {
               color: "hsl(var(--chart-2))",
             },
           }}
-          className="h-[300px]"
+          className="h-[250px] sm:h-[300px] w-full"
         >
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="feedbackGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
@@ -61,8 +66,8 @@ export function FeedbackChart({ data = chartData }: FeedbackChartProps) {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" />
+              <XAxis dataKey="month" stroke="#9ca3af" fontSize={12} tickMargin={5} />
+              <YAxis stroke="#9ca3af" fontSize={12} tickMargin={5} width={30} />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Area type="monotone" dataKey="feedback" stroke="#8b5cf6" fillOpacity={1} fill="url(#feedbackGradient)" />
             </AreaChart>

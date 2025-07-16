@@ -1,106 +1,111 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "../auth/[...nextauth]/route"
-import clientPromise from "@/lib/mongodb"
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-
-    console.log("API /api/forms POST - Server Session:", session)
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const formData = await request.json()
-    const db = (await clientPromise).db("feedbackpro")
-    const formsCollection = db.collection("forms")
-
-    const { id, ...restFormData } = formData
-
-    let formIdToReturn: string
-    let message: string
-
-    // Check if it's an existing form (id is provided and not empty)
-    if (id && id !== "") {
-      // Attempt to update an existing form
-      const existingForm = await formsCollection.findOne({ id: id, userId: session.user.id })
-
-      if (existingForm) {
-        await formsCollection.updateOne(
-          { id: id, userId: session.user.id },
-          {
-            $set: {
-              ...restFormData,
-              updatedAt: new Date(),
-            },
-          },
-        )
-        formIdToReturn = id
-        message = "Form updated successfully"
-      } else {
-        // If ID is provided but form doesn't exist for this user, treat as new
-        const newFormId = `form_${Date.now()}`
-        const newForm = {
-          ...formData,
-          id: newFormId,
-          userId: session.user.id,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          responses: 0,
-          isActive: true,
-          userEmail: session.user.email,
-        }
-        await formsCollection.insertOne(newForm)
-        formIdToReturn = newFormId
-        message = "Form created successfully (with new ID as original was not found)"
-      }
-    } else {
-      // Create a new form
-      const newFormId = `form_${Date.now()}`
-      const newForm = {
-        ...formData,
-        id: newFormId,
-        userId: session.user.id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        responses: 0,
-        isActive: true,
-        userEmail: session.user.email,
-      }
-      await formsCollection.insertOne(newForm)
-      formIdToReturn = newFormId
-      message = "Form created successfully"
-    }
-
-    return NextResponse.json({
-      success: true,
-      formId: formIdToReturn,
-      message: message,
-    })
-  } catch (error) {
-    console.error("Error creating/updating form:", error)
-    return NextResponse.json({ error: "Failed to create/update form" }, { status: 500 })
-  }
-}
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { connectToDatabase } from "@/lib/mongodb"
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session) {
+    if (!session?.user?.email) {
+      console.log("No session or user email found")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const db = (await clientPromise).db("feedbackpro")
-    const forms = db.collection("forms")
+    console.log("Fetching forms for user:", session.user.email)
+    console.log("Session user object:", JSON.stringify(session.user, null, 2))
 
-    const userForms = await forms.find({ userId: session.user.id }).sort({ createdAt: -1 }).toArray()
+    const { db } = await connectToDatabase()
 
-    return NextResponse.json(userForms)
+    // Try multiple user ID formats to find existing forms
+    const possibleUserIds = [session.user.email, session.user.id, session.user.sub].filter(Boolean)
+
+    console.log("Trying user IDs:", possibleUserIds)
+
+    // First, let's see what forms exist in the database
+    const allForms = await db.collection("forms").find({}).limit(10).toArray()
+    console.log(
+      "Sample forms in database:",
+      allForms.map((f) => ({ id: f.id, userId: f.userId, title: f.title })),
+    )
+
+    // Query forms using multiple possible user IDs
+    const forms = await db
+      .collection("forms")
+      .find({
+        userId: { $in: possibleUserIds },
+      })
+      .sort({ createdAt: -1 })
+      .toArray()
+
+    console.log(`Found ${forms.length} forms for user IDs:`, possibleUserIds)
+
+    // Convert ObjectId to string and ensure proper structure
+    const serializedForms = forms.map((form) => ({
+      id: form.id || form._id.toString(),
+      _id: form._id.toString(),
+      title: form.title || "Untitled Form",
+      description: form.description || "",
+      fields: form.fields || [],
+      userId: form.userId,
+      isActive: form.isActive !== false,
+      createdAt: form.createdAt || new Date().toISOString(),
+      updatedAt: form.updatedAt || new Date().toISOString(),
+      settings: form.settings || {},
+      responses: 0, // Will be updated by frontend
+    }))
+
+    return NextResponse.json(serializedForms)
   } catch (error) {
-    console.error("Error fetching forms:", error)
-    return NextResponse.json({ error: "Failed to fetch forms" }, { status: 500 })
+    console.error("GET /api/forms error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { title, description, fields, settings } = body
+
+    if (!title || !fields || !Array.isArray(fields)) {
+      return NextResponse.json({ error: "Title and fields are required" }, { status: 400 })
+    }
+
+    const { db } = await connectToDatabase()
+
+    // Generate unique form ID
+    const formId = `form_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    const formData = {
+      id: formId,
+      title,
+      description: description || "",
+      fields,
+      userId: session.user.email, // Use email as userId
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      settings: settings || {},
+    }
+
+    console.log("Creating form with userId:", session.user.email)
+    const result = await db.collection("forms").insertOne(formData)
+
+    const newForm = {
+      ...formData,
+      _id: result.insertedId.toString(),
+    }
+
+    console.log("Created new form:", newForm.id)
+    return NextResponse.json(newForm, { status: 201 })
+  } catch (error) {
+    console.error("POST /api/forms error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

@@ -24,6 +24,7 @@ interface Form {
   isActive: boolean
   createdAt: string
   updatedAt: string
+  userId: string
 }
 
 export default function FormsPage() {
@@ -57,37 +58,45 @@ export default function FormsPage() {
   const fetchForms = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/forms")
+      console.log("Fetching forms for user:", session?.user?.email)
+
+      const response = await fetch("/api/forms", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
       if (response.ok) {
         const data = await response.json()
+        console.log("Received forms data:", data)
 
         // Fetch feedback count for each form
         const formsWithCounts = await Promise.all(
           data.map(async (form: Form) => {
             try {
-              // Updated API call to get feedback count for specific form
-              const feedbackResponse = await fetch(`/api/feedback/count?formId=${form.id}`)
+              const feedbackResponse = await fetch(`/api/feedback?formId=${form.id}`)
               if (feedbackResponse.ok) {
                 const feedbackData = await feedbackResponse.json()
-                console.log(`Form ${form.id} feedback count:`, feedbackData.count)
                 return {
                   ...form,
-                  responses: feedbackData.count || 0,
+                  responses: feedbackData.length || 0,
                 }
               } else {
-                console.error(`Failed to fetch feedback count for form ${form.id}`)
+                console.error(`Failed to fetch feedback for form ${form.id}`)
                 return { ...form, responses: 0 }
               }
             } catch (error) {
-              console.error(`Error fetching feedback count for form ${form.id}:`, error)
+              console.error(`Error fetching feedback for form ${form.id}:`, error)
               return { ...form, responses: 0 }
             }
           }),
         )
 
-        console.log("Forms with updated counts:", formsWithCounts)
         setForms(formsWithCounts)
       } else {
+        const errorData = await response.json()
+        console.error("Failed to fetch forms:", response.status, errorData)
         toast.error("Failed to fetch forms")
       }
     } catch (error) {
@@ -152,10 +161,10 @@ export default function FormsPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center px-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <div className="text-white text-xl">Loading forms...</div>
+          <div className="text-white text-lg md:text-xl">Loading forms...</div>
         </div>
       </div>
     )
@@ -163,29 +172,29 @@ export default function FormsPage() {
 
   if (status === "unauthenticated") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center px-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <div className="text-white text-xl">Redirecting to sign in...</div>
+          <div className="text-white text-lg md:text-xl">Redirecting to sign in...</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div ref={pageRef} className="min-h-screen bg-gradient-to-br from-gray-900 to-black">
-      <DashboardHeader user={session.user} />
+    <div ref={pageRef} className="min-h-screen bg-gradient-to-br from-gray-900 to-black overflow-x-hidden">
+      <DashboardHeader user={session?.user} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
         <div className="forms-content">
           {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">My Forms</h1>
-              <p className="text-gray-400">Manage and track your feedback forms</p>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">My Forms</h1>
+              <p className="text-gray-400 text-sm md:text-base">Manage and track your feedback forms</p>
             </div>
-            <Link href="/form-builder">
-              <Button className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
+            <Link href="/form-builder" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
                 <Plus className="h-4 w-4 mr-2" />
                 Create New Form
               </Button>
@@ -208,8 +217,8 @@ export default function FormsPage() {
           {/* Forms Grid */}
           {filteredForms.length === 0 ? (
             <Card className="bg-white/5 border-white/10">
-              <CardContent className="p-12 text-center">
-                <div className="text-gray-400 text-lg mb-4">
+              <CardContent className="p-8 md:p-12 text-center">
+                <div className="text-gray-400 text-base md:text-lg mb-4">
                   {forms.length === 0 ? "No forms created yet" : "No forms match your search"}
                 </div>
                 {forms.length === 0 && (
@@ -223,21 +232,25 @@ export default function FormsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {filteredForms.map((form) => (
                 <Card
                   key={form.id}
                   className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20 hover:border-white/40 transition-all duration-300 group"
                 >
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <CardTitle className="text-white text-lg mb-2 line-clamp-2">{form.title}</CardTitle>
-                        <CardDescription className="text-gray-400 line-clamp-2">{form.description}</CardDescription>
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-white text-base md:text-lg mb-2 line-clamp-2 break-words">
+                          {form.title}
+                        </CardTitle>
+                        <CardDescription className="text-gray-400 line-clamp-2 text-sm break-words">
+                          {form.description}
+                        </CardDescription>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                          <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white shrink-0">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -264,7 +277,7 @@ export default function FormsPage() {
                             Preview
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => router.push(`/forms/${form.id}/analytics`)}
+                            onClick={() => router.push(`/analytics?formId=${form.id}`)}
                             className="text-gray-300 hover:text-white hover:bg-gray-700"
                           >
                             <BarChart3 className="h-4 w-4 mr-2" />
@@ -288,7 +301,7 @@ export default function FormsPage() {
                     </div>
                   </CardHeader>
 
-                  <CardContent>
+                  <CardContent className="pt-0">
                     <div className="space-y-4">
                       {/* Status Badge */}
                       <div className="flex items-center justify-between">
@@ -301,11 +314,11 @@ export default function FormsPage() {
                       {/* Stats */}
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-white">{form.responses}</div>
+                          <div className="text-xl md:text-2xl font-bold text-white">{form.responses}</div>
                           <div className="text-xs text-gray-400">Responses</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-white">
+                          <div className="text-sm md:text-base font-bold text-white">
                             {new Date(form.createdAt).toLocaleDateString()}
                           </div>
                           <div className="text-xs text-gray-400">Created</div>
@@ -313,22 +326,22 @@ export default function FormsPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => router.push(`/form-builder?id=${form.id}`)}
-                          className="flex-1 border-white/20 text-white hover:bg-white/10"
+                          className="flex-1 border-white/20 text-white hover:bg-white/10 text-xs md:text-sm"
                         >
-                          <Edit className="h-4 w-4 mr-1" />
+                          <Edit className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                           Edit
                         </Button>
                         <Button
                           size="sm"
                           onClick={() => copyFormLink(form.id)}
-                          className="flex-1 bg-gradient-to-r from-purple-500 to-blue-500"
+                          className="flex-1 bg-gradient-to-r from-purple-500 to-blue-500 text-xs md:text-sm"
                         >
-                          <Share2 className="h-4 w-4 mr-1" />
+                          <Share2 className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                           Share
                         </Button>
                       </div>

@@ -17,7 +17,14 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Share2, Copy, Mail, MessageSquare, Facebook, Twitter, QrCode, UploadIcon as Embed } from "lucide-react"
 import { toast } from "sonner"
-import type { FormConfig } from "@/app/form-builder/page"
+
+interface FormConfig {
+  id?: string
+  title: string
+  description: string
+  fields: any[]
+  settings: any
+}
 
 interface ShareModalProps {
   formConfig: FormConfig
@@ -26,34 +33,56 @@ interface ShareModalProps {
 
 export function ShareModal({ formConfig, children }: ShareModalProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const formUrl = `${window.location.origin}/feedback/${formConfig.id}`
+
+  // Provide safe defaults for formConfig properties
+  const safeFormConfig = {
+    id: formConfig?.id || `form_${Date.now()}`,
+    title: formConfig?.title || "Untitled Form",
+    description: formConfig?.description || "",
+    fields: formConfig?.fields || [],
+    settings: formConfig?.settings || {},
+  }
+
+  const formUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/feedback/${safeFormConfig.id}`
   const embedCode = `<iframe src="${formUrl}" width="100%" height="600" frameborder="0"></iframe>`
 
   const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success(`${label} copied to clipboard!`)
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text)
+      toast.success(`${label} copied to clipboard!`)
+    } else {
+      toast.error("Clipboard not available")
+    }
   }
 
   const shareViaEmail = () => {
-    const subject = encodeURIComponent(`Feedback Request: ${formConfig.title}`)
+    const subject = encodeURIComponent(`Feedback Request: ${safeFormConfig.title}`)
     const body = encodeURIComponent(
       `Hi,\n\nI'd love to get your feedback! Please fill out this quick form:\n\n${formUrl}\n\nThanks!`,
     )
-    window.open(`mailto:?subject=${subject}&body=${body}`)
+    if (typeof window !== "undefined") {
+      window.open(`mailto:?subject=${subject}&body=${body}`)
+    }
   }
 
   const shareViaSMS = () => {
     const message = encodeURIComponent(`Please share your feedback: ${formUrl}`)
-    window.open(`sms:?body=${message}`)
+    if (typeof window !== "undefined") {
+      window.open(`sms:?body=${message}`)
+    }
   }
 
   const shareViaTwitter = () => {
-    const text = encodeURIComponent(`Share your feedback: ${formConfig.title}`)
-    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(formUrl)}`)
+    const text = encodeURIComponent(`Share your feedback: ${safeFormConfig.title}`)
+    if (typeof window !== "undefined") {
+      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(formUrl)}`)
+    }
   }
 
   const shareViaFacebook = () => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(formUrl)}`)
+    if (typeof window !== "undefined") {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(formUrl)}`)
+    }
   }
 
   return (
