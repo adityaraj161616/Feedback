@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { formId, responses, submittedAt } = body
+    const { formId, responses, submittedAt, userId } = body
 
     if (!formId || !responses) {
       return NextResponse.json({ error: "Form ID and responses are required" }, { status: 400 })
@@ -55,12 +55,19 @@ export async function POST(request: NextRequest) {
     }
 
     const feedbackData = {
-      formId,
+      formId: formId.toString(), // Ensure formId is stored as string for consistency
       responses,
       submittedAt: submittedAt || new Date().toISOString(),
-      sentiment,
       createdAt: new Date().toISOString(),
+      sentiment,
     }
+
+    console.log("Storing feedback:", {
+      formId: feedbackData.formId,
+      hasResponses: !!responses,
+      hasSentiment: !!sentiment,
+      responseKeys: Object.keys(responses),
+    })
 
     const result = await db.collection("feedback").insertOne(feedbackData)
 

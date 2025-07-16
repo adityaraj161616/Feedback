@@ -19,22 +19,62 @@ export async function GET(request: NextRequest) {
 
     const { db } = await connectToDatabase()
 
-    // Build query for feedback
-    const feedbackQuery: any = { userId: session.user.id }
+    // Get all forms for this user first
+    const formsQuery = { userId: session.user.id }
+    const forms = await db.collection("forms").find(formsQuery).toArray()
+    console.log(`Found ${forms.length} forms for user ${session.user.id}`)
+
+    // Get form IDs that belong to this user - use the 'id' field, not '_id'
+    const userFormIds = forms.map((form) => form.id || form._id.toString())
+    console.log("User form IDs:", userFormIds)
+
+    // Build query for feedback - get feedback for forms owned by this user
+    const feedbackQuery: any = {}
+
     if (formId && formId !== "all") {
-      feedbackQuery.formId = formId
+      // If specific form is selected, make sure it belongs to the user
+      if (userFormIds.includes(formId)) {
+        feedbackQuery.formId = formId
+      } else {
+        // Form doesn't belong to user, return empty results
+        console.log("Form doesn't belong to user, returning empty results")
+        return NextResponse.json({
+          overview: { totalFeedback: 0, averageSentimentScore: 0, formsCreated: forms.length, activeForms: 0 },
+          feedbackTrends: [],
+          sentimentTrends: [],
+          formPerformance: [],
+          sentimentDistribution: { Positive: 0, Neutral: 0, Negative: 0 },
+          aiInsights: {
+            recommendations: ["No feedback data available for the selected form."],
+            topKeywords: [],
+            emergingTrends: [],
+            emotionAnalysis: {},
+            actionableInsights: [],
+            averageConfidence: 0,
+            totalAnalyzed: 0,
+          },
+        })
+      }
+    } else {
+      // Get feedback for all forms owned by this user
+      feedbackQuery.formId = { $in: userFormIds }
     }
 
     console.log("Feedback query:", feedbackQuery)
 
-    // Get all feedback for this user
-    const feedback = await db.collection("feedback").find(feedbackQuery).toArray()
+    // Get all feedback for forms owned by this user
+    const feedback = await db.collection("feedback").find(feedbackQuery).sort({ submittedAt: -1 }).toArray()
     console.log(`Found ${feedback.length} feedback entries`)
 
-    // Get all forms for this user
-    const formsQuery = { userId: session.user.id }
-    const forms = await db.collection("forms").find(formsQuery).toArray()
-    console.log(`Found ${forms.length} forms`)
+    // Debug: Log some feedback details
+    if (feedback.length > 0) {
+      console.log("Sample feedback entries:")
+      feedback.slice(0, 3).forEach((f, i) => {
+        console.log(
+          `  ${i + 1}. FormID: ${f.formId}, SubmittedAt: ${f.submittedAt || f.createdAt}, HasSentiment: ${!!f.sentiment}`,
+        )
+      })
+    }
 
     // Process feedback and analyze sentiment
     const processedFeedback = []
@@ -121,7 +161,12 @@ export async function GET(request: NextRequest) {
 
     // Calculate analytics
     const analytics = calculateAnalytics(processedFeedback, forms)
-    console.log("Final analytics:", JSON.stringify(analytics, null, 2))
+    console.log("Final analytics overview:", {
+      totalFeedback: analytics.overview.totalFeedback,
+      formsCreated: analytics.overview.formsCreated,
+      activeForms: analytics.overview.activeForms,
+      averageSentimentScore: analytics.overview.averageSentimentScore,
+    })
 
     return NextResponse.json(analytics)
   } catch (error) {
@@ -188,16 +233,19 @@ function calculateAnalytics(feedback: any[], forms: any[]) {
   const feedbackTrends = calculateFeedbackTrends(feedback)
   const sentimentTrends = calculateSentimentTrends(feedback)
 
-  // Form performance
+  // Form performance - match feedback to forms by ID (use form.id, not form._id)
   const formPerformance = forms.map((form) => {
-    const formFeedback = feedback.filter((f) => f.formId === form._id.toString())
+    const formIdStr = form.id || form._id.toString()
+    const formFeedback = feedback.filter((f) => f.formId === formIdStr)
     const formSentimentScore =
       formFeedback.length > 0
         ? formFeedback.reduce((sum, f) => sum + (f.sentiment?.score || 0.5), 0) / formFeedback.length
         : 0
 
+    console.log(`Form ${form.title}: ${formFeedback.length} feedback entries, avg sentiment: ${formSentimentScore}`)
+
     return {
-      id: form._id.toString(),
+      id: formIdStr,
       title: form.title || "Untitled Form",
       totalFeedback: formFeedback.length,
       averageSentimentScore: formSentimentScore,
